@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;600;700&display=swap">
 <meta name="color-scheme" content="light">
 <style>
 /* Layout: an operations app in the manner of the family's Brand OS — dark top bar, tab row, white cards on a warm grey
@@ -983,7 +982,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 .ag.interest { opacity: .85; }
 .ag.interest .linkish { color: var(--ink-2); }
 </style>
-<link rel="stylesheet" href="theme.css?v=1">
+<link rel="stylesheet" href="theme.css?v=3">
 </head>
 <body>
 <header class="topbar">
@@ -1025,7 +1024,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="shim.js?v=2"></script>
+<script src="shim.js?v=3"></script>
 <script>
 (function () {
   "use strict";
@@ -1055,6 +1054,9 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     docs: { label: "자료", lead: "지원할 때 쓰는 파일과 문서 — 원본 파일은 구글 드라이브에 있어요", subs: [["materials", "지원자료"], ["files", "파일 보관함"]] },
     settings: { label: "설정", lead: "작가 워크스페이스 설정 — 작가마다 다른 값은 여기서 정해요", subs: [["profile", "작가 프로필"], ["sources", "수집처"], ["collect", "수집 현황"], ["workspace", "화면·백업"]] }
   };
+  const SUB_LEAD = { strategy: "작가님이 정한 방향과 공모를 고르는 기준", goals: "올해·3년 목표와 지금까지의 실적", execution: "목표를 위해 할 일, 앞으로 3개월, 예산", review: "지금 손볼 점과 잘 되고 있는 점",
+    results: "지원 결과와 성과를 한눈에", works: "홈페이지 작품과 공모 출품 이력", history: "전시·수상 이력 — 홈페이지 CV가 기준이에요", sales: "작품 판매 기록", projects: "기획 중이거나 진행한 프로젝트",
+    materials: "지원할 때 쓰는 CV·포트폴리오·작가노트", files: "구글 드라이브 자료실의 폴더와 파일", profile: "작가마다 다른 정보와 선호 기준", sources: "공모를 찾아보는 주최처·사이트·인스타그램", collect: "자동 수집이 읽은 공고와 결과", workspace: "화면 설정, 계정, 백업" };
   const SUB_AREA = Object.fromEntries(Object.entries(AREAS).flatMap(([a, o]) => o.subs.map(([k]) => [k, a])));
   const ROUTES = Object.assign({ home: ["home"], plan: ["plan"], calls: ["calls"], todo: ["plan"] },
     Object.fromEntries(Object.keys(SUB_AREA).map((k) => [k, ["artist", k]])),
@@ -1720,8 +1722,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     const ag = agendaItems().filter((x) => x.date <= wkEnd && !x.done && (x.date >= TODAY || x.task));
     const wD = ag.filter((x) => x.kind === "마감").length, wT = ag.filter((x) => x.task).length;
     const props = (tasks || []).filter((t) => !t.cancelled && t.proposed && !t.done).length;
-    kids.push(secH("cal", "이번 주 일정", "오늘부터 7일 · 마감 " + wD + " · 할 일 " + wT));
-    kids.push(card({ title: "이번 주 일정", count: ag.length, right: moreBtn("일정", () => { planTab = "cal"; planMode = "week"; go("plan"); }) }, [
+    kids.push(card({ title: "이번 주 일정", count: ag.length, sub: "오늘부터 7일 · 마감 " + wD + " · 할 일 " + wT, right: moreBtn("일정", () => { planTab = "cal"; planMode = "week"; go("plan"); }) }, [
       ag.length ? h("div", { class: "agenda" }, ag.slice(0, 8).map(agRow)) : est("cal", "이번 주 일정이 없어요", null),
       ag.length > 8 ? moreBtn("그 밖에 " + (ag.length - 8) + "건", () => { planTab = "cal"; planMode = "week"; go("plan"); }) : null,
       props ? h("p", { class: "small muted", style: "margin:8px 0 0" }, "제안된 할 일 " + props + "건은 아직 일정에 없어요 · ", h("button", { class: "linkish", type: "button", onclick: () => { planTab = "todo"; todoSub = "proposed"; go("plan"); } }, "제안 보기")) : null]));
@@ -2541,7 +2542,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     lastSub[area] = artistSub;
     const nav0 = h("div", { class: "subnav pg-sub", role: "tablist", "aria-label": A.label + " 메뉴", style: "grid-template-columns:repeat(" + A.subs.length + ",minmax(0,1fr));max-width:" + (A.subs.length * 120) + "px" }, A.subs.map(([k, l]) => h("button", { type: "button", role: "tab", "aria-pressed": String(artistSub === k), onclick: () => go(k) }, l)));
     const subL = (A.subs.find(([k]) => k === artistSub) || [, ""])[1];
-    const nav = [pageH(subL, A.label + " · " + A.lead), nav0];
+    const nav = [pageH(subL, SUB_LEAD[artistSub] || A.lead), nav0];
     if (db === false) { el.replaceChildren(...clean([nav, empty(NO_DB)])); return; }
     let body;
     switch (artistSub) {
