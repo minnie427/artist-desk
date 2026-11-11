@@ -30,12 +30,12 @@
   }
   function ungate() { const el = document.getElementById("desk-gate"); if (el) el.remove(); }
   const st = document.createElement("style");
-  st.textContent = "#desk-gate{position:fixed;inset:0;z-index:100;background:var(--bg,#f3f2ee);display:grid;place-items:center;padding:24px}" +
-    ".dg-box{max-width:380px;width:100%;background:var(--surface,#fff);border:1px solid var(--line,#e3e1db);border-radius:12px;padding:28px 24px;display:flex;flex-direction:column;gap:10px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.08)}" +
-    ".dg-logo{width:40px;height:40px;border-radius:10px;background:#19191a;color:#fff;display:grid;place-items:center;font:800 20px/1 sans-serif;margin:0 auto}" +
-    ".dg-box h1{font-size:20px;margin:4px 0 0}.dg-box h2{font-size:15px;margin:0;color:var(--ink-2,#5d5c58);font-weight:600}.dg-box p{font-size:13.5px;color:var(--ink-2,#5d5c58);margin:0 0 6px;white-space:pre-line}" +
-    ".dg-in{height:42px;border-radius:8px;border:1px solid var(--line-2,#d3d1ca);padding:0 12px;font:15px/1 inherit;background:var(--surface,#fff);color:inherit}.dg-msg{font-size:13px!important;min-height:1em}" +
-    ".dg-btn{height:42px;border-radius:8px;border:1px solid var(--line-2,#d3d1ca);background:var(--surface,#fff);font:600 14.5px/1 inherit;cursor:pointer}.dg-btn.primary{background:#23395b;color:#fff;border-color:#23395b}";
+  st.textContent = "#desk-gate{position:fixed;inset:0;z-index:100;background:var(--bg,#f4f5f2);display:grid;place-items:center;padding:24px}" +
+    ".dg-box{max-width:380px;width:100%;background:var(--surface,#fff);border:1px solid var(--line,#e3e1db);border-radius:16px;padding:36px 28px 30px;display:flex;flex-direction:column;gap:10px;text-align:center;box-shadow:0 24px 60px -16px rgba(22,30,40,.18)}" +
+    ".dg-logo{width:44px;height:44px;border-radius:12px;background:var(--accent,#2a3b73);color:#fff;display:grid;place-items:center;font:600 22px/1 var(--f-title,serif);margin:0 auto 4px}" +
+    ".dg-box h1{font:600 26px/1.2 var(--f-title,serif);letter-spacing:-.02em;margin:4px 0 0}.dg-box h2{font-size:15px;margin:0;color:var(--ink-2,#5d5c58);font-weight:600}.dg-box p{font-size:13.5px;color:var(--ink-2,#5d5c58);margin:0 0 6px;white-space:pre-line}" +
+    ".dg-in{height:44px;border-radius:10px;border:1px solid var(--line-2,#d3d1ca);padding:0 12px;font:15px/1 inherit;background:var(--surface,#fff);color:inherit}.dg-msg{font-size:13px!important;min-height:1em}" +
+    ".dg-btn{height:44px;border-radius:10px;border:1px solid var(--line-2,#d3d1ca);background:var(--surface,#fff);font:600 14.5px/1 inherit;cursor:pointer}.dg-btn.primary{background:var(--accent,#2a3b73);color:#fff;border-color:var(--accent,#2a3b73)}";
   document.head.appendChild(st);
 
   const METHODS = C.loginMethods || ["email"];

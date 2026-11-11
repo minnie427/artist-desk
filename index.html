@@ -7,7 +7,9 @@
 <meta name="description" content="작가가 공모를 찾고, 지원을 관리하고, 작품·이력을 쌓아 가는 작가 워크스페이스">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;600;700&display=swap">
+<meta name="color-scheme" content="light">
 <style>
 /* Layout: an operations app in the manner of the family's Brand OS — dark top bar, tab row, white cards on a warm grey
    ground, real tables with group rows, square-cornered controls, mono figures, a right-hand detail drawer. */
@@ -43,13 +45,6 @@
   --f-body: "Pretendard Variable", "Pretendard", "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --nav-h: 62px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #121212; --surface: #1b1b1c; --surface-2: #222223; --line: #2d2d2f; --line-2: #3a3a3c; --ink: #ecebe8; --ink-2: #a5a39e; --ink-3: #75736f;
-    --bar: #0b0b0c; --bar-ink: #ecebe8; --accent: #9fb5dc; --accent-2: #b4c6e6; --on-accent: #10151d; --accent-soft: #232c3b; --seal: #e3806f; --seal-soft: #3a2420; --ok: #8cbd9b; --ok-soft: #1e2c23; --warn: #d9b06a; --warn-soft: #32291a;
-    --c-deadline: #e3806f; --c-prep: #9fb5dc; --c-show: #d9b06a; --c-mine: #8cbd9b; --scrim: rgba(0,0,0,.6); --shadow: 0 10px 30px rgba(0,0,0,.5); color-scheme: dark;
-  }
 }
 :root[data-theme="dark"] {
   --bg: #121212; --surface: #1b1b1c; --surface-2: #222223; --line: #2d2d2f; --line-2: #3a3a3c; --ink: #ecebe8; --ink-2: #a5a39e; --ink-3: #75736f;
@@ -988,6 +983,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 .ag.interest { opacity: .85; }
 .ag.interest .linkish { color: var(--ink-2); }
 </style>
+<link rel="stylesheet" href="theme.css?v=1">
 </head>
 <body>
 <header class="topbar">
@@ -1029,7 +1025,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="shim.js"></script>
+<script src="shim.js?v=2"></script>
 <script>
 (function () {
   "use strict";
