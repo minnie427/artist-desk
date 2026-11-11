@@ -45,7 +45,7 @@ end $$;
 drop trigger if exists docs_touch on public.docs;
 create trigger docs_touch before insert or update on public.docs for each row execute function public.docs_touch();
 
--- 지운 기록도 30일은 되살릴 수 있게 보관
+-- 지운 기록은 따로 보관해 되살릴 수 있게
 create table if not exists public.docs_trash (
   workspace_id uuid not null,
   coll text not null,
