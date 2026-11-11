@@ -63,34 +63,30 @@ drop trigger if exists docs_keep_deleted on public.docs;
 create trigger docs_keep_deleted before delete on public.docs for each row execute function public.docs_keep_deleted();
 
 -- 권한 확인 (RLS가 자기 자신을 다시 부르지 않게 security definer)
-create or replace function public.has_role(ws uuid, roles text[]) returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.members m where m.workspace_id = ws and lower(m.email) = lower(auth.jwt() ->> 'email') and m.role = any(roles));
-$$;
-
 alter table public.workspaces enable row level security;
 alter table public.members enable row level security;
 alter table public.docs enable row level security;
 alter table public.docs_trash enable row level security;
 
 drop policy if exists ws_read on public.workspaces;
-create policy ws_read on public.workspaces for select using (public.has_role(id, array['owner','admin','artist','viewer']));
+create policy ws_read on public.workspaces for select using (private.has_role(id, array['owner','admin','artist','viewer']));
 
 drop policy if exists mem_read on public.members;
-create policy mem_read on public.members for select using (public.has_role(workspace_id, array['owner','admin','artist','viewer']));
+create policy mem_read on public.members for select using (private.has_role(workspace_id, array['owner','admin','artist','viewer']));
 drop policy if exists mem_admin on public.members;
-create policy mem_admin on public.members for all using (public.has_role(workspace_id, array['owner'])) with check (public.has_role(workspace_id, array['owner']));
+create policy mem_admin on public.members for all using (private.has_role(workspace_id, array['owner'])) with check (private.has_role(workspace_id, array['owner']));
 
 drop policy if exists docs_read on public.docs;
-create policy docs_read on public.docs for select using (public.has_role(workspace_id, array['owner','admin','artist','viewer']));
+create policy docs_read on public.docs for select using (private.has_role(workspace_id, array['owner','admin','artist','viewer']));
 drop policy if exists docs_write on public.docs;
-create policy docs_write on public.docs for insert with check (public.has_role(workspace_id, array['owner','admin','artist']));
+create policy docs_write on public.docs for insert with check (private.has_role(workspace_id, array['owner','admin','artist']));
 drop policy if exists docs_update on public.docs;
-create policy docs_update on public.docs for update using (public.has_role(workspace_id, array['owner','admin','artist'])) with check (public.has_role(workspace_id, array['owner','admin','artist']));
+create policy docs_update on public.docs for update using (private.has_role(workspace_id, array['owner','admin','artist'])) with check (private.has_role(workspace_id, array['owner','admin','artist']));
 drop policy if exists docs_delete on public.docs;
-create policy docs_delete on public.docs for delete using (public.has_role(workspace_id, array['owner','admin','artist']));
+create policy docs_delete on public.docs for delete using (private.has_role(workspace_id, array['owner','admin','artist']));
 
 drop policy if exists trash_read on public.docs_trash;
-create policy trash_read on public.docs_trash for select using (public.has_role(workspace_id, array['owner','admin']));
+create policy trash_read on public.docs_trash for select using (private.has_role(workspace_id, array['owner','admin']));
 
 -- 일부 칸만 바꾸기 (동시에 고쳐도 서로 덮어쓰지 않게 서버에서 합친다). "__delete__": true 인 칸은 지운다.
 create or replace function public.doc_patch(p_ws uuid, p_coll text, p_id text, p_patch jsonb) returns integer language plpgsql security invoker set search_path = public as $$
@@ -108,3 +104,23 @@ do $$ begin
   begin alter publication supabase_realtime add table public.docs; exception when duplicate_object then null; end;
 end $$;
 alter table public.docs replica identity full;
+
+-- ===== 보안 보강 (2026-11-12): 권한 확인 함수와 삭제 보관 트리거를 API에 노출되지 않는 private 스키마로 =====
+create schema if not exists private;
+grant usage on schema private to authenticated;
+create or replace function private.has_role(ws uuid, roles text[]) returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.members m where m.workspace_id = ws and lower(m.email) = lower(auth.jwt() ->> 'email') and m.role = any(roles));
+$$;
+revoke all on function private.has_role(uuid, text[]) from public;
+grant execute on function private.has_role(uuid, text[]) to authenticated;
+-- (정책들은 private.has_role 을 쓰도록 다시 만듦 — 실제 적용본은 Supabase 마이그레이션 harden_functions 참고)
+create or replace function private.docs_keep_deleted() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.docs_trash (workspace_id, coll, id, data, deleted_by) values (old.workspace_id, old.coll, old.id, old.data, auth.jwt() ->> 'email');
+  return old;
+end $$;
+revoke all on function private.docs_keep_deleted() from public;
+drop trigger if exists docs_keep_deleted on public.docs;
+create trigger docs_keep_deleted before delete on public.docs for each row execute function private.docs_keep_deleted();
+revoke all on function public.doc_patch(uuid, text, text, jsonb) from public, anon;
+grant execute on function public.doc_patch(uuid, text, text, jsonb) to authenticated;
