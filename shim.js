@@ -6,7 +6,7 @@
   const qs = new URLSearchParams(location.search);
   const WS_SLUG = qs.get("ws") || C.workspace;
   const configured = !!(C.supabaseUrl && C.supabaseAnonKey && window.supabase);
-  const sb = configured ? window.supabase.createClient(C.supabaseUrl, C.supabaseAnonKey, { auth: { persistSession: true, detectSessionInUrl: true, flowType: "pkce" } }) : null;
+  const sb = configured ? window.supabase.createClient(C.supabaseUrl, C.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit" } }) : null;
 
   let wsId = null, wsName = "", me = null, role = null;
   const cache = new Map();                 // coll -> Map(id -> { data, version })
@@ -34,9 +34,32 @@
     ".dg-box{max-width:380px;width:100%;background:var(--surface,#fff);border:1px solid var(--line,#e3e1db);border-radius:12px;padding:28px 24px;display:flex;flex-direction:column;gap:10px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.08)}" +
     ".dg-logo{width:40px;height:40px;border-radius:10px;background:#19191a;color:#fff;display:grid;place-items:center;font:800 20px/1 sans-serif;margin:0 auto}" +
     ".dg-box h1{font-size:20px;margin:4px 0 0}.dg-box h2{font-size:15px;margin:0;color:var(--ink-2,#5d5c58);font-weight:600}.dg-box p{font-size:13.5px;color:var(--ink-2,#5d5c58);margin:0 0 6px;white-space:pre-line}" +
+    ".dg-in{height:42px;border-radius:8px;border:1px solid var(--line-2,#d3d1ca);padding:0 12px;font:15px/1 inherit;background:var(--surface,#fff);color:inherit}.dg-msg{font-size:13px!important;min-height:1em}" +
     ".dg-btn{height:42px;border-radius:8px;border:1px solid var(--line-2,#d3d1ca);background:var(--surface,#fff);font:600 14.5px/1 inherit;cursor:pointer}.dg-btn.primary{background:#23395b;color:#fff;border-color:#23395b}";
   document.head.appendChild(st);
 
+  const METHODS = C.loginMethods || ["email"];
+  async function sendLink(email, msgEl, btn) {
+    email = String(email || "").trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msgEl.textContent = "이메일 주소를 확인해 주세요."; return; }
+    btn.disabled = true; msgEl.textContent = "보내는 중…";
+    const redirectTo = location.origin + location.pathname + location.search;
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo, shouldCreateUser: true } });
+    btn.disabled = false;
+    msgEl.textContent = error ? "보내지 못했어요: " + error.message : email + " 로 로그인 링크를 보냈어요. 메일의 링크를 누르면 바로 들어와요. (안 보이면 스팸함도 확인해 주세요)";
+  }
+  function loginGate() {
+    gate("작가 워크스페이스에 로그인", METHODS.includes("email") ? "등록된 이메일로 로그인 링크를 받아요." : "등록된 구글 계정으로 로그인해 주세요.", METHODS.includes("google") ? [["구글로 로그인", signIn, !METHODS.includes("email")]] : []);
+    if (!METHODS.includes("email")) return;
+    const box = document.querySelector("#desk-gate .dg-box");
+    const inp = document.createElement("input"); inp.type = "email"; inp.placeholder = "이메일 주소"; inp.autocomplete = "email"; inp.className = "dg-in";
+    const btn = document.createElement("button"); btn.type = "button"; btn.className = "dg-btn primary"; btn.textContent = "로그인 링크 받기";
+    const msg = document.createElement("p"); msg.className = "dg-msg";
+    btn.onclick = () => sendLink(inp.value, msg, btn);
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") sendLink(inp.value, msg, btn); });
+    const first = box.querySelector(".dg-btn");
+    box.insertBefore(inp, first); box.insertBefore(btn, first); box.insertBefore(msg, first);
+  }
   async function signIn() {
     const redirectTo = location.origin + location.pathname + location.search;
     const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
@@ -66,7 +89,7 @@
     if (!configured) { return { ok: false, why: "config" }; }
     const { data: { session } } = await sb.auth.getSession();
     if (!session) {
-      gate("작가 워크스페이스에 로그인", "등록된 구글 계정으로 로그인해 주세요.", [["구글로 로그인", signIn, true]]);
+      loginGate();
       return new Promise(() => {}); // 로그인 화면에서 멈춤 (로그인하면 페이지가 다시 열림)
     }
     me = session.user;
