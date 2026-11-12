@@ -144,7 +144,26 @@
     }
   };
 
-  window.DESK = { signOut, email: () => me && me.email, role: () => role, workspace: () => wsName, web: true };
+  // 파일 보관함 (Supabase Storage, 비공개 버킷 'desk' · 경로 = 워크스페이스id/폴더/파일)
+  const BUCKET = "desk";
+  const safeName = (n) => { const m = String(n || "file").match(/^(.*?)(\.[A-Za-z0-9]{1,6})?$/); const base = (m[1] || "file").normalize("NFKD").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "file"; return base + (m[2] || "").toLowerCase(); };
+  const filesApi = {
+    async upload(file, folder) {
+      if (!wsId) throw new Error("not ready");
+      if (file.size > 50 * 1024 * 1024) throw Object.assign(new Error("too big"), { code: "too_big" });
+      const path = wsId + "/" + String(folder || "misc").replace(/[^A-Za-z0-9/_-]/g, "") + "/" + Date.now().toString(36) + "-" + safeName(file.name);
+      const { error } = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined, upsert: false });
+      if (error) throw error;
+      return { path, name: file.name || "파일", size: file.size, type: file.type || "", at: new Date().toISOString(), by: me && me.email };
+    },
+    async url(path, secs, download) {
+      const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, secs || 3600, download ? { download } : undefined);
+      if (error) throw error; return data.signedUrl;
+    },
+    async remove(path) { const { error } = await sb.storage.from(BUCKET).remove([path]); if (error) throw error; }
+  };
+
+  window.DESK = { signOut, email: () => me && me.email, role: () => role, workspace: () => wsName, web: true, files: filesApi };
   window.claude = {
     async use(name) {
       const r = await ready;
@@ -152,6 +171,7 @@
       if (name === "db") return dbApi;
       if (name === "user") return userApi;
       if (name === "downloads") return dlApi;
+      if (name === "files") return filesApi;
       return null; // mcp(메일·캘린더·드라이브 직접 연결)는 웹앱 1차 버전에서 아직 없음
     }
   };

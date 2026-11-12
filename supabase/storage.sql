@@ -1,0 +1,4 @@
+-- 파일 보관함 (적용됨: migration desk_storage_v1)
+-- 비공개 버킷 'desk' · 경로 첫 폴더 = 워크스페이스 id · 읽기 = 멤버 전원, 쓰기·삭제 = owner/admin/artist
+-- 폴더: inbox/(제보 캡처) · materials/(지원 파일) · calls/(공모별 제출 파일)
+-- 파일 정보는 docs의 'files' 컬렉션에 (path, name, size, type, kind, callId) 로 남긴다.

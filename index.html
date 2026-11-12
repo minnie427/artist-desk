@@ -982,7 +982,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 .ag.interest { opacity: .85; }
 .ag.interest .linkish { color: var(--ink-2); }
 </style>
-<link rel="stylesheet" href="theme.css?v=3">
+<link rel="stylesheet" href="theme.css?v=5">
 </head>
 <body>
 <header class="topbar">
@@ -1024,7 +1024,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="shim.js?v=3"></script>
+<script src="shim.js?v=4"></script>
 <script>
 (function () {
   "use strict";
@@ -1128,6 +1128,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 
   // ---------- state ----------
   let db = null, mcp = null, downloads = null;
+  let kit = null, fileDocs = null, filesApi = null;
   let calls = null, tasks = null, events = null, exhibitions = null, requests = null, strategy = null, situation = null, inbox = null, catalog = null, sources = null, drive = null, gcal = null;
   let driveState = { state: "idle", code: null, at: null }, driveWatch = null, driveFolders = null, driveQ = "이현정";
   let isOwner = false, canWrite = false, mode = "artist";
@@ -1579,7 +1580,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     const estNow = cs.filter((c) => !c.deadline && c.expected === ym && ["검토", "보류"].includes(c.status));
     if (estNow.length) out.push({ lvl: "check", t: "이번 달 공고가 나올 예상 공모 " + estNow.length + "건", s: estNow.slice(0, 3).map((c) => c.name).join(", "), go: () => openDetail(estNow[0]._id) });
     const inb = (inbox || []).filter((x) => x.status !== "정리됨" && x.status !== "확인 불가");
-    if (inb.length) out.push({ lvl: "news", t: "제보함 " + inb.length + "건", s: "월요일 주간 스캔이 상세를 채워 공모 목록에 올려요", go: () => openCalls({ tab: "inbox" }) });
+    if (inb.length) out.push({ lvl: "news", t: "제보함 " + inb.length + "건", s: "매일 아침 자동 정리가 상세를 채워 공모 목록에 올려요", go: () => openCalls({ tab: "inbox" }) });
     const fresh = cs.filter((c) => c.foundAt && c.foundAt >= addDays(-7) && G.decide(c));
     if (fresh.length) out.push({ lvl: "news", t: "새로 들어온 지원 결정 대기 " + fresh.length + "건", s: "최근 7일에 추가됐어요", go: () => openCalls({ tab: "decide", sort: "new" }) });
     if (strategy && (!strategy.approval || strategy.approval.status !== "확정")) out.push({ lvl: "check", t: "방향 초안 확인 대기", s: "작가님이 확정하거나 고칠 점을 남겨 주세요", go: () => go("strategy") });
@@ -2207,7 +2208,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     else rows = sortRows(rows);
 
     const addBtn = canWrite ? (isAdmin() ? B("공모 추가", { kind: "primary", icon: "plus", cls: "ph-add", onclick: () => openForm("calls", null) }) : null) : null;
-    const linkBtn = canWrite ? B("링크로 제보", { icon: "link", cls: "ph-add", onclick: () => openForm("inbox", null) }) : null;
+    const linkBtn = canWrite ? B("공모 제보", { icon: "link", cls: "ph-add", onclick: () => openForm("inbox", null) }) : null;
     const kids = [pageH("공모", explore ? "아직 고르지 않은 기회 — 살펴보고 마음에 들면 ‘검토 후보로’" : "고른 공모를 지원 결정부터 결과까지 관리해요", h("div", { class: "r" }, linkBtn, addBtn))];
     // 1단계: 탐색 / 내 공모 (데스크톱은 왼쪽 메뉴에 있음)
     const cc = callCounts();
@@ -2289,11 +2290,159 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     el.replaceChildren(...clean(kids));
     if (focused) { const s = $("cq"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
   }
+
+  // ================= 파일 보관함 · 지원서 키트 =================
+  const KIT_KINDS = [["bio", "작가 소개·약력"], ["statement", "작가노트"], ["work", "작품 설명"], ["proposal", "기획안·전시 계획"], ["cvtext", "CV (글로 붙이는 것)"], ["other", "기타 문구"]];
+  const FILE_KINDS = [["portfolio", "포트폴리오"], ["cv", "CV·이력서"], ["images", "작품 이미지"], ["profile", "프로필 사진"], ["doc", "서류 (신청서 등)"], ["other", "기타"]];
+  const KIND_L = Object.fromEntries([...KIT_KINDS, ...FILE_KINDS]);
+  const LANG_L = { ko: "국문", en: "영문" };
+  const fmtSize = (n) => n == null ? "" : n < 1024 * 1024 ? Math.max(1, Math.round(n / 1024)) + "KB" : (n / 1024 / 1024).toFixed(1) + "MB";
+  const textCount = (t) => { t = String(t || "").trim(); return { all: t.replace(/\r/g, "").length, noSp: t.replace(/\s/g, "").length, words: t ? t.split(/\s+/).filter(Boolean).length : 0 }; };
+  const countLabel = (t) => { const c = textCount(t); return "공백 포함 " + c.all.toLocaleString() + "자 · 제외 " + c.noSp.toLocaleString() + "자 · " + c.words.toLocaleString() + "단어"; };
+  async function uploadMany(list, folder, extra) {
+    if (!filesApi) throw Object.assign(new Error("no files"), { code: "no_files" });
+    const out = [];
+    for (const f of list) out.push(Object.assign(await filesApi.upload(f, folder), extra || {}));
+    return out;
+  }
+  async function openFile(ref, download) {
+    if (!filesApi || !ref || !ref.path) return;
+    const w = window.open("", "_blank");
+    try { const u = await filesApi.url(ref.path, 600, download ? (ref.name || true) : undefined); if (w) w.location = u; else location.href = u; }
+    catch (e) { if (w) w.close(); toast("파일을 열 수 없어요. 잠시 뒤 다시 해 주세요."); }
+  }
+  const fileLink = (ref, label) => h("button", { class: "linkish file-l", type: "button", onclick: () => openFile(ref) }, ic(/^image\//.test(ref.type || "") ? "image" : "file", "ico"), label || ref.name || "파일", ref.size ? h("small", {}, " " + fmtSize(ref.size)) : null);
+  function copyText(t, label) {
+    const done = () => toast((label || "문구") + "를 복사했어요. 지원서 칸에 붙여 넣으세요");
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done)); else fallbackCopy(t, done);
+  }
+  function fallbackCopy(t, done) { const a = h("textarea", { style: "position:fixed;opacity:0" }); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); done(); } catch (e) { toast("복사하지 못했어요. 길게 눌러 직접 복사해 주세요."); } a.remove(); }
+  // 업로드 버튼: 숨은 파일 입력 + 버튼
+  function uploadBtn(label, o) {
+    const inp = h("input", { type: "file", multiple: o.multiple === false ? null : true, accept: o.accept || null, hidden: true, onchange: async (e) => {
+      const list = Array.from(e.target.files || []); e.target.value = ""; if (!list.length) return;
+      const big = list.find((f) => f.size > 50 * 1024 * 1024); if (big) { toast("‘" + big.name + "’은 50MB가 넘어 올릴 수 없어요."); return; }
+      btn.disabled = true; btn.lastChild.textContent = "올리는 중… (" + list.length + "개)";
+      try {
+        const refs = await uploadMany(list, o.folder, o.extra);
+        await Promise.all(refs.map((r) => db.collection("files").add(Object.assign(r, { kind: o.kind || "other", callId: o.callId || null, label: null }))));
+        toast(refs.length + "개 파일을 올렸어요");
+      } catch (err) { toast(err && err.code === "no_files" ? "이 화면에서는 파일을 올릴 수 없어요 (웹앱에서 열어 주세요)." : "파일을 올리지 못했어요. 형식(이미지·PDF·문서)과 크기를 확인해 주세요."); }
+      btn.disabled = false; btn.lastChild.textContent = label;
+    } });
+    const btn = h("button", { class: "btn " + (o.size || "sm"), type: "button", disabled: !canWrite || !filesApi, title: filesApi ? null : "웹앱에서만 쓸 수 있어요", onclick: () => inp.click() }, ic("plus"), h("span", {}, label));
+    return h("span", { class: "upl" }, btn, inp);
+  }
+  async function removeFile(f) {
+    try { if (filesApi && f.path) await filesApi.remove(f.path); } catch (e) { /* 파일이 이미 없으면 기록만 지움 */ }
+    await write("file:" + f._id, () => db.collection("files").doc(f._id).delete(), "‘" + (f.name || "파일") + "’을 지웠어요");
+  }
+  function fileRow(f, opts) {
+    opts = opts || {};
+    const kindSel = canWrite && opts.kindEdit !== false ? h("select", { "aria-label": (f.name || "파일") + " 종류", onchange: (e) => write("file:" + f._id, () => db.collection("files").doc(f._id).update({ kind: e.target.value }), "종류를 바꿨어요") }, FILE_KINDS.map(([v, l]) => h("option", { value: v }, l))) : null;
+    if (kindSel) kindSel.value = f.kind || "other";
+    let arm = false;
+    const del = canWrite ? h("button", { class: "btn ghost sm", type: "button", title: "두 번 눌러야 지워져요", onclick: (e) => {
+      const b = e.currentTarget; if (!arm) { arm = true; b.textContent = "한 번 더"; setTimeout(() => { arm = false; b.textContent = "삭제"; }, 3000); return; } removeFile(f); } }, "삭제") : null;
+    return h("div", { class: "frow" }, h("div", { class: "fr-main" }, fileLink(f), h("div", { class: "small muted" }, [opts.kindEdit === false ? KIND_L[f.kind] : null, f.at ? fmt(String(f.at).slice(0, 10)) : null].filter(Boolean).join(" · "))),
+      h("div", { class: "fr-act" }, kindSel, B("내려받기", { size: "sm", kind: "ghost", icon: "download", onclick: () => openFile(f, true) }), del));
+  }
+  // 공모 요구사항을 읽어 필요한 문구·파일 종류와 분량을 찾는다 (규칙 기반 · 원문은 그대로 보여 줌)
+  function reqNeeds(c) {
+    const raw = Array.isArray(c.requirements) ? c.requirements : String(c.requirements || "").split(/\n+/);
+    const defLang = c.region === "해외" ? "en" : "ko";
+    const out = [];
+    for (const line of raw.map((x) => String(x || "").trim()).filter(Boolean)) {
+      const kinds = [];
+      if (/작가\s*노트|작가\s*의도|작업\s*(설명|소개|노트)|statement/i.test(line)) kinds.push("statement");
+      if (/약력|작가\s*소개|자기\s*소개|bio(graphy)?\b|about the artist|프로필\s*(글|문)/i.test(line)) kinds.push("bio");
+      if (/작품\s*(설명|캡션|정보|목록)|caption|description of (the )?work|work description|title.*(medium|size|dimension)/i.test(line)) kinds.push("work");
+      if (/기획\s*(안|서)|전시\s*계획|계획서|proposal/i.test(line)) kinds.push("proposal");
+      if (/\bCV\b|이력서|경력\s*(사항|서)|resume|curriculum/i.test(line)) kinds.push("cv");
+      if (/포트폴리오|portfolio/i.test(line)) kinds.push("portfolio");
+      if (/이미지|사진|image|jpe?g|photo|png/i.test(line) && !kinds.includes("portfolio")) kinds.push("images");
+      if (/신청서|지원서|application form|서약서|동의서|증명서/i.test(line)) kinds.push("doc");
+      if (!kinds.length) continue;
+      const mC = line.match(/(\d[\d,]*)\s*(자|글자|characters?|chars?)/i), mW = line.match(/(\d[\d,]*)\s*(단어|words?)/i);
+      const mm = mC || mW;
+      const limit = mm ? { n: Number(mm[1].replace(/,/g, "")), unit: mC ? "자" : "단어", min: /^\s*(이상|or more)/i.test(line.slice(mm.index + mm[0].length)) || /(at least|minimum|min\.?)\s*$/i.test(line.slice(0, mm.index)) } : null;
+      const lang = /영문|영어|english/i.test(line) ? "en" : /국문|한글|한국어/i.test(line) ? "ko" : defLang;
+      for (const k of kinds) out.push({ line, kind: k, limit, lang });
+    }
+    return out;
+  }
+  const fitsLimit = (t, limit) => { if (!limit) return null; const c = textCount(t); const n = limit.unit === "단어" ? c.words : c.all; return { ok: limit.min ? n >= limit.n : n <= limit.n, n }; };
+  const limitL = (l) => l.n.toLocaleString() + l.unit + (l.min ? " 이상" : " 이내");
+  function bestBlock(kind, lang, limit) {
+    const k2 = kind === "cv" ? "cvtext" : kind;
+    const cand = (kit || []).filter((b) => b.kind === k2 && b.text && (!lang || (b.lang || "ko") === lang));
+    if (!cand.length) return { block: null, others: [] };
+    const scored = cand.map((b) => ({ b, f: fitsLimit(b.text, limit), n: textCount(b.text).all })).sort((x, y) => {
+      if (limit) { if ((x.f && x.f.ok) !== (y.f && y.f.ok)) return x.f && x.f.ok ? -1 : 1; return (x.f.ok !== !!limit.min) ? y.n - x.n : x.n - y.n; }
+      return String(y.b.updatedAt || "").localeCompare(String(x.b.updatedAt || ""));
+    });
+    return { block: scored[0].b, fit: scored[0].f, others: scored.slice(1).map((x) => x.b) };
+  }
+  function kitBlockLine(b, limit) {
+    const f = fitsLimit(b.text, limit);
+    return h("div", { class: "kb" },
+      h("div", { class: "kb-h" }, h("b", {}, b.title || KIND_L[b.kind]), h("span", { class: "tag" }, LANG_L[b.lang] || "국문"),
+        f ? h("span", { class: "fit " + (f.ok ? "ok" : "over") }, f.ok ? limitL(limit) + " 맞음" : (limit.min ? limit.n.toLocaleString() + limit.unit + "보다 짧음" : limit.n.toLocaleString() + limit.unit + " 초과") + " (" + f.n.toLocaleString() + ")") : null),
+      h("p", { class: "kb-t" }, String(b.text).slice(0, 140) + (String(b.text).length > 140 ? "…" : "")),
+      h("div", { class: "kb-a" }, h("span", { class: "small muted" }, countLabel(b.text)), h("span", {}, B("복사", { size: "sm", icon: "file", onclick: () => copyText(b.text, b.title || KIND_L[b.kind]) }), canWrite ? B("고치기", { size: "sm", kind: "ghost", icon: "edit", onclick: () => openForm("kit", b) }) : null)));
+  }
+  // 공모 상세 › 지원 준비 › 지원서 키트
+  function applyKit(c) {
+    const needs = reqNeeds(c);
+    const mine = (fileDocs || []).filter((f) => f.callId === c._id);
+    const rows = [];
+    const seen = new Set();
+    for (const nd of needs) {
+      const key = nd.kind + "|" + nd.lang + "|" + (nd.limit ? nd.limit.n + nd.limit.unit : "");
+      if (seen.has(key)) continue; seen.add(key);
+      const isFile = ["portfolio", "images", "doc", "profile"].includes(nd.kind) || (nd.kind === "cv" && !/붙여|입력|텍스트|text|field/i.test(nd.line));
+      const head = h("div", { class: "need-h" }, h("b", {}, KIND_L[nd.kind] || (nd.kind === "cv" ? "CV" : nd.kind)), nd.kind !== "images" && nd.kind !== "portfolio" ? h("span", { class: "tag" }, LANG_L[nd.lang]) : null, nd.limit ? h("span", { class: "tag" }, limitL(nd.limit)) : null, h("span", { class: "need-src small muted" }, "공고: " + nd.line));
+      let body;
+      if (isFile) {
+        const fk = nd.kind === "cv" ? "cv" : nd.kind;
+        const fs = (fileDocs || []).filter((f) => !f.callId && f.kind === fk);
+        body = fs.length ? h("div", { class: "flist" }, fs.slice(0, 4).map((f) => fileRow(f, { kindEdit: false }))) : h("p", { class: "small muted" }, "자료 › 지원자료 › 지원 파일에 ‘" + KIND_L[fk] + "’ 파일이 없어요.", " ", h("button", { class: "linkish small", type: "button", onclick: () => { closeSheet(); go("materials"); } }, "올리러 가기"));
+      } else {
+        const { block, others } = bestBlock(nd.kind, nd.lang, nd.limit);
+        body = block ? [kitBlockLine(block, nd.limit), others.length ? h("details", { class: "kb-more" }, h("summary", {}, "다른 버전 " + others.length + "개"), others.map((b) => kitBlockLine(b, nd.limit))) : null]
+          : h("p", { class: "small muted" }, LANG_L[nd.lang] + " ‘" + KIND_L[nd.kind === "cv" ? "cvtext" : nd.kind] + "’ 문구가 아직 없어요. ", canWrite ? h("button", { class: "linkish small", type: "button", onclick: () => openForm("kit", null, { kind: nd.kind === "cv" ? "cvtext" : nd.kind, lang: nd.lang }) }, "지금 추가하기") : null);
+      }
+      rows.push(h("div", { class: "need" }, head, body));
+    }
+    return h("div", { class: "kitbox" },
+      h("div", { class: "p-head" }, h("h4", {}, "지원서 키트"), h("span", { class: "small muted" }, needs.length ? "공고의 제출물에 맞는 문구·파일" : "")),
+      rows.length ? rows : h("p", { class: "small muted" }, c.requirements && [c.requirements].flat().length ? "제출물에서 글·파일 항목을 찾지 못했어요. 자료 › 지원자료에서 필요한 것을 골라 쓰세요." : "제출물 정보가 아직 없어요. 공고 확인 후 채워지면 맞는 문구·파일을 골라 보여 드려요."),
+      h("div", { class: "need" }, h("div", { class: "need-h" }, h("b", {}, "이 공모에 낸 파일"), h("span", { class: "small muted" }, "제출한 신청서·이미지 등을 남겨 두면 나중에 찾기 쉬워요")),
+        mine.length ? h("div", { class: "flist" }, mine.map((f) => fileRow(f))) : null,
+        canWrite ? uploadBtn("이 공모 파일 올리기", { folder: "calls", callId: c._id, kind: "doc" }) : null));
+  }
+  // 자료 › 지원자료 위쪽: 지원 문구 · 지원 파일
+  function kitPanels() {
+    const blocks = (kit || []).slice().sort((a, b) => KIT_KINDS.findIndex((k) => k[0] === a.kind) - KIT_KINDS.findIndex((k) => k[0] === b.kind) || String(a.lang || "ko").localeCompare(String(b.lang || "ko")) || textCount(a.text).all - textCount(b.text).all);
+    const groups = KIT_KINDS.map(([k, l]) => [k, l, blocks.filter((b) => b.kind === k)]).filter((g) => g[2].length);
+    const textPanel = card({ title: "지원 문구", count: blocks.length || null, sub: "작가 소개·작가노트·작품 설명을 국문·영문, 길이별로 저장해 두면 공모 상세에서 분량에 맞는 것을 골라 바로 복사할 수 있어요.",
+      right: canWrite ? B("문구 추가", { size: "sm", icon: "plus", onclick: () => openForm("kit", null) }) : null },
+      groups.length ? h("div", { class: "kgroups" }, groups.map(([k, l, bs]) => h("div", { class: "kg" }, h("h3", {}, l, h("span", { class: "small muted" }, " " + bs.length)), bs.map((b) => kitBlockLine(b, null)))))
+        : est("file", "저장한 문구가 없어요", "예: ‘작가노트 · 영문 · 300단어’처럼 길이별로 하나씩 넣어 두세요."));
+    const gen = (fileDocs || []).filter((f) => !f.callId);
+    const fGroups = FILE_KINDS.map(([k, l]) => [k, l, gen.filter((f) => (f.kind || "other") === k)]).filter((g) => g[2].length);
+    const filePanel = card({ title: "지원 파일", count: gen.length || null, sub: "포트폴리오 PDF·CV·작품 이미지처럼 여러 공모에 쓰는 파일 · 한 개 50MB까지",
+      right: canWrite ? uploadBtn("파일 올리기", { folder: "materials", kind: "other" }) : null },
+      !filesApi ? co("info", "파일 보관함은 웹앱(desk.leehyunjung.art)에서 열려요", null)
+        : fGroups.length ? h("div", { class: "kgroups" }, fGroups.map(([k, l, fs]) => h("div", { class: "kg" }, h("h3", {}, l, h("span", { class: "small muted" }, " " + fs.length)), h("div", { class: "flist" }, fs.map((f) => fileRow(f))))))
+        : est("folder", "올린 파일이 없어요", "올린 뒤 종류(포트폴리오·CV·작품 이미지)를 골라 두면 공모마다 맞는 파일을 찾아 줘요."));
+    return [textPanel, filePanel];
+  }
   function inboxPanel(inb) {
     return h("section", { class: "panel", style: "margin-top:6px" },
-      h("div", { class: "p-head" }, h("h2", {}, ic("inbox", "ico"), " 제보한 링크", cntB(inb.length || null)), canWrite ? B("링크로 제보", { size: "sm", icon: "plus", onclick: () => openForm("inbox", null) }) : null),
-      h("p", { class: "p-sub" }, "월요일 아침 주간 스캔이 원문을 찾아 정리한 뒤 ‘내 공모 › 결정 대기’에 올려요."),
-      inb.length ? h("div", {}, inb.map((x) => h("div", { class: "inbox-row" }, h("div", { class: "t" }, x.url ? h("a", { href: x.url, target: "_blank", rel: "noopener" }, x.url) : null, x.note ? h("div", { class: "muted" }, x.note) : null, h("div", { class: "small muted" }, "정리 대기 · " + fmt(String(x.createdAt || "").slice(0, 10)))),
+      h("div", { class: "p-head" }, h("h2", {}, "제보함", cntB(inb.length || null)), canWrite ? B("공모 제보", { size: "sm", icon: "plus", onclick: () => openForm("inbox", null) }) : null),
+      h("p", { class: "p-sub" }, "매일 아침 자동 정리가 링크·캡처에서 원문을 찾아 상세를 채운 뒤 ‘내 공모 › 결정 대기’에 올려요."),
+      inb.length ? h("div", {}, inb.map((x) => h("div", { class: "inbox-row" }, h("div", { class: "t" }, x.url ? h("a", { href: x.url, target: "_blank", rel: "noopener" }, x.url) : null, x.note ? h("div", { class: "muted" }, x.note) : null, Array.isArray(x.shots) && x.shots.length ? h("div", { class: "filters" }, x.shots.map((r, i) => fileLink(r, "캡처 " + (i + 1)))) : null, h("div", { class: "small muted" }, "정리 대기 · " + fmt(String(x.createdAt || "").slice(0, 10)))),
         isAdmin() ? B("직접 등록", { size: "sm", icon: "edit", onclick: () => openForm("calls", null, { url: x.url, note: x.note, inboxId: x._id, status: "검토" }) }) : null))) : null,
       inboxDone());
   }
@@ -2481,7 +2630,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       decision,
       sec([step("2", "핵심 조건")], core),
       sec([step("3", "평가 근거")], evalBox, h("span", { class: "small muted" }, "가중치는 계획 › 전략에서")),
-      sec([step("4", "지원 준비")], [taskBox, worksEdit ? h("div", { class: "box2" }, worksEdit) : null].filter(Boolean).length ? [taskBox, worksEdit ? h("div", { class: "box2" }, worksEdit) : null] : h("p", { class: "small muted" }, "지원을 결정하면 제출물로 준비할 일이 제안돼요."), progressOf(c)),
+      sec([step("4", "지원 준비")], [["검토", "준비", "보류", "제출"].includes(c.status) ? applyKit(c) : null, taskBox, worksEdit ? h("div", { class: "box2" }, worksEdit) : null].filter(Boolean).length ? [["검토", "준비", "보류", "제출"].includes(c.status) ? applyKit(c) : null, taskBox, worksEdit ? h("div", { class: "box2" }, worksEdit) : null] : h("p", { class: "small muted" }, "지원을 결정하면 제출물로 준비할 일이 제안돼요."), progressOf(c)),
       sec([step("5", "상세 공고")], [summary.length ? h("div", { class: "box2" }, summary) : null, content, applyBox, tips.length ? tips : null].filter(Boolean)),
       h("section", { class: "sec" }, h("div", { class: "p-head" }, h("label", { class: "sec-h", for: "memo" }, "작가 메모"), memoSave), memo),
       h("div", { class: "actions" },
@@ -2763,8 +2912,9 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     const cvStale = ["cv_ko", "cv_en"].filter((k) => { const df = dm[k]; return df && df.modifiedTime && lastEx && String(df.modifiedTime).slice(0, 10) < lastEx; });
     const out = [];
     if (cvStale.length) out.push(co("warn", "전시·수상 이력이 CV보다 나중에 바뀌었어요", "이력 마지막 수정 " + fmt(lastEx) + " · " + cvStale.map((k) => k === "cv_ko" ? "국문 CV" : "영문 CV").join("·") + " 갱신이 필요할 수 있어요."));
+    out.push(...kitPanels());
     out.push(h("div", { class: "kpis" }, MAT_STATES.slice().reverse().map((st) => h("div", { class: "kpi static" }, h("span", { class: "l" }, st), h("span", { class: "n" }, mats.filter((m) => (m.status || "없음") === st).length)))));
-    out.push(card({ title: "지원 자료", count: doneN + " / " + mats.length, sub: "지원서에 붙이는 기본 자료 · 파일은 파일 보관함(드라이브)과 이어져요" }, mats.length ? h("div", { class: "tbl-wrap" }, h("table", { class: "tbl mat-t" },
+    out.push(card({ title: "준비 현황", count: doneN + " / " + mats.length, sub: "지원서에 붙이는 기본 자료의 준비 상태 · 원본은 드라이브 자료실" }, mats.length ? h("div", { class: "tbl-wrap" }, h("table", { class: "tbl mat-t" },
       h("thead", {}, h("tr", {}, h("th", {}, "자료명"), h("th", {}, "언어"), h("th", {}, "버전"), h("th", {}, "최종 수정"), h("th", {}, "원본"), h("th", {}, "상태"))),
       h("tbody", {}, mats.map((m, i) => {
         const id = "mat-" + m.key;
@@ -3513,10 +3663,14 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     ],
     events: () => [{ k: "title", l: "일정", req: 1, wide: 1 }, { k: "date", l: "날짜", t: "date", req: 1 }, { k: "endDate", l: "끝나는 날 (여러 날이면)", t: "date" }, { k: "kind", l: "종류", t: "select", o: EV_KINDS }, { k: "note", l: "메모", t: "textarea", wide: 1 }],
     situation: () => [{ k: "stage", l: "지금 단계 (한 줄)", wide: 1 }, { k: "summary", l: "현재 상황", t: "textarea", wide: 1 }, { k: "price", l: "작품 가격", wide: 1 }, { k: "works.total", l: "회화 작품 수", t: "number" }, { k: "works.recent", l: "2025~26 신작 수", t: "number" }, { k: "strengths", l: "강점 (한 줄에 하나)", t: "lines", wide: 1 }, { k: "gaps", l: "채워야 할 것 (한 줄에 하나)", t: "lines", wide: 1 }],
-    inbox: () => [{ k: "url", l: "링크 (있으면 붙여 넣기)", wide: 1, t: "url", ph: "인스타그램 글의 ‘공유 → 링크 복사’ 후 붙여 넣기" }, { k: "note", l: "어떤 공모인가요? (링크가 없으면 보이는 대로 적어 주세요)", t: "textarea", wide: 1, ph: "예: ○○미술관 개인전 공모, 11월 말 마감이라고 봤어요" }],
+    inbox: () => [{ k: "url", l: "링크", wide: 1, t: "url", ph: "인스타그램 글의 ‘공유 → 링크 복사’ 후 붙여 넣기" }].concat(filesApi ? [{ k: "shots", l: "캡처 (여러 장 가능)", t: "files", accept: "image/*", wide: 1, hint: "공고 이미지나 화면 캡처를 고르면 내용을 읽어 채워요" }] : [], [{ k: "note", l: "메모 (선택)", t: "textarea", wide: 1, ph: "예: 관심 있어요 / ○○미술관, 11월 말 마감이라고 봤어요" }]),
+    kit: () => [{ k: "kind", l: "종류", t: "select", o: KIT_KINDS, req: 1 }, { k: "lang", l: "언어", t: "select", o: [["ko", "국문"], ["en", "영문"]], req: 1 },
+      { k: "title", l: "이름", wide: 1, ph: "예: 작가노트 짧은 판 (300단어) — 공모마다 고를 때 보여요" },
+      { k: "text", l: "문구", t: "textarea", wide: 1, req: 1, rows: 12, count: 1, ph: "지원서에 그대로 붙여 넣을 글" },
+      { k: "note", l: "메모 (선택)", wide: 1, ph: "예: 2026.11 홈페이지 작가노트 기준" }],
     sale: () => [{ k: "work", l: "작품 (이름 일부를 치면 홈페이지 작품이 떠요)", req: 1, wide: 1, list: "dl-works" }, { k: "date", l: "날짜", t: "date" }, { k: "price", l: "가격 (만원)", t: "number" }, { k: "where", l: "어디서 (전시·페어·직접)", wide: 1 }]
   };
-  const LABEL = { calls: "공모", exhibitions: "전시", tasks: "일정·할 일", events: "일정", situation: "현재 상황", sale: "판매 기록", inbox: "공모 제보" };
+  const LABEL = { calls: "공모", exhibitions: "전시", tasks: "일정·할 일", events: "일정", situation: "현재 상황", sale: "판매 기록", inbox: "공모 제보", kit: "지원 문구" };
   const getPath = (o, p) => p.split(".").reduce((a, k) => a == null ? a : a[k], o);
   function setPath(o, p, v) { const ks = p.split("."); let cur = o; for (let i = 0; i < ks.length - 1; i++) { if (typeof cur[ks[i]] !== "object" || cur[ks[i]] == null) cur[ks[i]] = {}; cur = cur[ks[i]]; } cur[ks[ks.length - 1]] = v; }
   const normUrl = (u) => String(u || "").trim().replace(/^https?:\/\/(www\.)?/, "").replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
@@ -3539,7 +3693,13 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       }
       if (f.t === "select") input = h("select", { id }, h("option", { value: "" }, f.none || "선택"), f.o.map((o) => { const [v, l] = Array.isArray(o) ? o : [o, o]; return h("option", { value: v }, l); }));
       else if (f.t === "bool") input = h("select", { id }, h("option", { value: "" }, "아니오"), h("option", { value: "1" }, "예"));
-      else if (f.t === "textarea" || f.t === "lines" || f.t === "lines2") input = h("textarea", { id, placeholder: f.ph, rows: f.t === "textarea" ? null : "4" });
+      else if (f.t === "files") {
+        const prev = h("div", { class: "shots", id: id + "-prev" });
+        const pickLbl = h("span", {}, "사진 고르기");
+        input = h("input", { id, type: "file", multiple: true, accept: f.accept || null, class: "vh", onchange: (e) => { const fl = Array.from(e.target.files || []); pickLbl.textContent = fl.length ? fl.length + "장 골랐어요 · 다시 고르기" : "사진 고르기"; prev.replaceChildren(...fl.map((x) => /^image\//.test(x.type) ? h("img", { src: URL.createObjectURL(x), alt: x.name }) : h("span", { class: "tag" }, x.name))); } });
+        return h("div", { class: "fld" + (f.wide ? " wide" : "") }, h("span", { class: "flbl" }, f.l), h("label", { class: "file-pick" }, ic("image"), pickLbl, input), f.hint ? h("span", { class: "small muted" }, f.hint) : null, prev);
+      }
+      else if (f.t === "textarea" || f.t === "lines" || f.t === "lines2") input = h("textarea", { id, placeholder: f.ph, rows: f.rows ? String(f.rows) : f.t === "textarea" ? null : "4" });
       else input = h("input", { id, type: f.t || "text", placeholder: f.ph || (coll === "tasks" && f.k === "title" ? ((CATS.find((x) => x[0] === catVal) || [])[2] || "") : null), inputmode: f.t === "number" ? "decimal" : null, list: f.list || null });
       let v = getPath(src, f.k);
       if (v == null && !rec && f.k === "status") v = "검토";
@@ -3549,11 +3709,13 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       else if (f.t === "lines") v = L(v);
       else if (f.t === "lines2") v = Array.isArray(v) ? v.map((x) => (x[f.keys[0]] || "") + " | " + (x[f.keys[1]] || "")).join("\n") : "";
       input.value = v == null ? "" : String(v);
-      return h("div", { class: "fld" + (f.wide ? " wide" : ""), "data-only": f.only || null, hidden: f.only && catVal !== f.only ? true : null }, h("label", { for: id }, f.l + (f.req ? " *" : "")), input, f.list === "dl-works" ? h("datalist", { id: "dl-works" }, catWorks().map((w) => h("option", { value: w.title }))) : null);
+      const counter = f.count ? h("span", { class: "small muted cnt-live" }, countLabel(input.value)) : null;
+      if (counter) input.addEventListener("input", () => { counter.textContent = countLabel(input.value); });
+      return h("div", { class: "fld" + (f.wide ? " wide" : ""), "data-only": f.only || null, hidden: f.only && catVal !== f.only ? true : null }, h("label", { for: id }, f.l + (f.req ? " *" : "")), input, counter, f.list === "dl-works" ? h("datalist", { id: "dl-works" }, catWorks().map((w) => h("option", { value: w.title }))) : null);
     }));
     const syncOnly = () => { for (const el of fields.querySelectorAll("[data-only]")) el.hidden = el.getAttribute("data-only") !== catVal; };
     delArm = false;
-    const deletable = rec && ["calls", "exhibitions", "tasks", "events"].includes(coll) && (isAdmin() || coll === "events" || (coll === "tasks" && !rec.auto));
+    const deletable = rec && ["calls", "exhibitions", "tasks", "events", "kit"].includes(coll) && (isAdmin() || coll === "events" || (coll === "tasks" && !rec.auto));
     const del = deletable ? h("button", { class: "btn danger", type: "button", title: "두 번 눌러야 지워져요", onclick: async (e) => {
       const b = e.currentTarget;
       if (!delArm) { delArm = true; b.classList.add("arm"); b.replaceChildren(ic("alert"), "한 번 더 누르면 삭제"); setTimeout(() => { delArm = false; b.classList.remove("arm"); b.replaceChildren(ic("trash"), "삭제"); }, 3000); return; }
@@ -3565,9 +3727,10 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     const calBtn = calDate && canWrite && !(gcal && gcal.calendarId) ? B(rec.calSent ? "구글 캘린더에 다시 넣기" : "구글 캘린더에 넣기", { kind: "ghost", icon: "cal", onclick: () => sendToCalendar(coll, rec._id, rec.title, calDate, rec.note || "") }) : null;
     const form = h("form", { novalidate: true, style: "display:flex;flex-direction:column;gap:14px", onsubmit: async (e) => {
       e.preventDefault();
-      const body = {};
+      const body = {}; let pickedFiles = [];
       for (const f of defs) {
         const id = "f-" + coll + "-" + f.k.replace(".", "_");
+        if (f.t === "files") { pickedFiles = Array.from($(id).files || []); continue; }
         let v = f.t === "cat" ? (catVal || "") : $(id).value.trim();
         if (f.req && !v) { err.textContent = f.t === "cat" ? "종류를 골라 주세요." : f.l.replace(/ \(.*\)/, "") + "을(를) 입력해 주세요."; err.hidden = false; return; }
         if (f.t === "number") { v = v === "" ? null : Number(v.replace(/,/g, "")); if (typeof v === "number" && isNaN(v)) { err.textContent = f.l.replace(/ \(.*\)/, "") + "은(는) 숫자로 입력해 주세요."; err.hidden = false; return; } }
@@ -3592,12 +3755,23 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
         const ok = await write("situation", () => db.doc("settings/situation").set(merged), "저장했어요"); if (ok) closeSheet(); return;
       }
       if (coll === "inbox") {
-        if (!body.url && !body.note) { err.textContent = "링크나 공모 이름 중 하나는 적어 주세요."; err.hidden = false; return; }
+        if (!body.url && !body.note && !pickedFiles.length) { err.textContent = "링크·캡처·메모 중 하나는 넣어 주세요."; err.hidden = false; return; }
         const u = body.url ? normUrl(body.url) : "\u0000";
         const dupCall = (calls || []).find((c) => [c.url, c.apply && c.apply.url, ...((c.sources || []).map((s) => s.url))].some((x) => x && normUrl(x) === u));
         if (dupCall) { err.textContent = "이미 등록된 공모예요: " + dupCall.name + " (" + SLABEL[dupCall.status] + ")"; err.hidden = false; return; }
         if ((inbox || []).some((x) => normUrl(x.url) === u)) { err.textContent = "이미 제보함에 있는 링크예요."; err.hidden = false; return; }
-        const ok = await write("inbox:new", () => db.collection("inbox").add(Object.assign(body, { status: "대기", fromOwner: isOwner, createdAt: stamp() })), "제보를 남겼어요. 월요일에 정리돼요"); if (ok) closeSheet(); return;
+        if (pickedFiles.length) {
+          const big = pickedFiles.find((fl) => fl.size > 50 * 1024 * 1024); if (big) { err.textContent = "‘" + big.name + "’은 50MB가 넘어요."; err.hidden = false; return; }
+          err.textContent = "캡처 " + pickedFiles.length + "장을 올리는 중…"; err.hidden = false; err.classList.add("busy");
+          try {
+            const refs = await uploadMany(pickedFiles, "inbox");
+            // 자동 정리 작업이 내용을 읽을 수 있게 7일짜리 열람 주소를 함께 남긴다 (멤버만 보는 기록)
+            for (const r of refs) { try { r.url = await filesApi.url(r.path, 7 * 86400); r.urlUntil = new Date(Date.now() + 7 * 86400e3).toISOString(); } catch (e2) { /* 주소 없이도 저장 */ } }
+            body.shots = refs;
+          } catch (e1) { err.classList.remove("busy"); err.textContent = "캡처를 올리지 못했어요. 이미지 파일인지 확인해 주세요."; return; }
+          err.classList.remove("busy"); err.hidden = true;
+        }
+        const ok = await write("inbox:new", () => db.collection("inbox").add(Object.assign(body, { status: "대기", fromOwner: isOwner, by: window.DESK && window.DESK.email ? window.DESK.email() : null, createdAt: stamp() })), "제보를 받았어요. 다음 날 아침에 상세를 채워 ‘결정 대기’에 올려요"); if (ok) closeSheet(); return;
       }
       if (coll === "sale") {
         const sales = ((situation || {}).sales || []).concat([Object.assign(body, { createdAt: stamp() })]);
@@ -3631,6 +3805,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       if (view === "plan") { label = "+ 일정·할 일"; fn = () => openForm("tasks", null, { due: calSel >= TODAY ? calSel : TODAY }); }
       else if (view === "calls" && isAdmin()) { label = "+ 공모 추가"; fn = () => openForm("calls", null); }
       else if (view === "calls") { label = "+ 공모 제보"; fn = () => openForm("inbox", null); }
+      else if (view === "home" && !isAdmin()) { label = "+ 공모 제보"; fn = () => openForm("inbox", null); }
       else if (view === "home") { label = "+ 일정·할 일"; fn = () => openForm("tasks", null, { due: TODAY }); }
     }
     fab.hidden = !label; fab.replaceChildren(...(label ? [ic("plus"), label.replace(/^\+\s*/, "")] : [])); fab.onclick = fn;
@@ -3695,8 +3870,8 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   route(location.hash.slice(1));
 
   (async () => {
-    const [d, u, m, dl] = await Promise.all([window.claude?.use?.("db") ?? null, window.claude?.use?.("user") ?? null, window.claude?.use?.("mcp") ?? null, window.claude?.use?.("downloads") ?? null]);
-    downloads = dl;
+    const [d, u, m, dl, fa] = await Promise.all([window.claude?.use?.("db") ?? null, window.claude?.use?.("user") ?? null, window.claude?.use?.("mcp") ?? null, window.claude?.use?.("downloads") ?? null, window.claude?.use?.("files") ?? null]);
+    downloads = dl; filesApi = fa;
     if (!d) { db = false; mail.state = "off"; renderAll(); return; }
     db = d; mcp = m;
     try { isOwner = u ? await u.isOwner() : false; } catch (e) { isOwner = false; }
@@ -3711,6 +3886,8 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     db.collection("exhibitions").onSnapshot((s) => { exhibitions = rows(s); renderAll(); }, () => {});
     db.collection("requests").onSnapshot((s) => { requests = rows(s); renderAll(); }, () => {});
     db.collection("inbox").onSnapshot((s) => { inbox = rows(s); renderAll(); }, () => {});
+    db.collection("kit").onSnapshot((s) => { kit = rows(s); renderAll(); }, () => {});
+    db.collection("files").onSnapshot((s) => { fileDocs = rows(s); renderAll(); }, () => {});
     db.doc("settings/strategy").onSnapshot((s) => { strategy = s.exists ? s.data() : false; renderAll(); }, () => {});
     db.doc("settings/situation").onSnapshot((s) => { situation = s.exists ? s.data() : false; renderAll(); }, () => {});
     db.doc("settings/catalog").onSnapshot((s) => { catalog = s.exists ? s.data() : false; renderAll(); }, () => {});
