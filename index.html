@@ -982,7 +982,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 .ag.interest { opacity: .85; }
 .ag.interest .linkish { color: var(--ink-2); }
 </style>
-<link rel="stylesheet" href="theme.css?v=5">
+<link rel="stylesheet" href="theme.css?v=8">
 </head>
 <body>
 <header class="topbar">
@@ -1001,6 +1001,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 </header>
 <nav class="tabs" aria-label="메뉴"><div class="tabs-in" role="tablist" id="tabs">
   <button type="button" role="tab" data-v="home" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg><span>홈</span><span class="dot" id="dot-home" hidden></span></button>
+  <button type="button" role="tab" data-v="work" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10z"/><path d="M13.5 7.5l3 3"/><path d="M14 20h6"/></svg><span>작업</span></button>
   <button type="button" role="tab" data-v="calls" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M8 4v16"/></svg><span>공모</span></button>
   <button type="button" role="tab" data-v="plan" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14.5" rx="1.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg><span>일정</span></button>
   <button type="button" role="tab" data-v="strat" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".8"/></svg><span>계획</span><span class="dot" id="dot-artist" hidden>!</span></button>
@@ -1049,18 +1050,20 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   const SITE = "https://leehyunjung.art";
   // 상단 메뉴: 홈 · 공모 · 일정 · 계획 · 기록 · 자료. 계획·기록·자료는 같은 화면 틀(v-artist)에 2차 탭으로 그린다.
   const AREAS = {
+    work: { label: "작업", lead: "아이디어에서 기획, 준비, 작품까지 — 작가님이 직접 쓰는 작업창", subs: [["ideas", "아이디어"], ["plans", "기획"], ["making", "작품 제작"], ["prep", "준비"]] },
     strat: { label: "계획", lead: "전략에서 실행까지 — 공모를 고르는 근거와 올해 할 일", subs: [["strategy", "전략"], ["goals", "목표"], ["execution", "실행"], ["review", "점검"]] },
     record: { label: "기록", lead: "실제로 한 활동과 작품이 쌓이는 곳 — 지원·제출 과정은 공모에서 관리해요", subs: [["results", "성과"], ["works", "작품"], ["history", "전시·수상"], ["sales", "판매"], ["projects", "프로젝트"]] },
     docs: { label: "자료", lead: "지원할 때 쓰는 파일과 문서 — 원본 파일은 구글 드라이브에 있어요", subs: [["materials", "지원자료"], ["files", "파일 보관함"]] },
     settings: { label: "설정", lead: "작가 워크스페이스 설정 — 작가마다 다른 값은 여기서 정해요", subs: [["profile", "작가 프로필"], ["sources", "수집처"], ["collect", "수집 현황"], ["workspace", "화면·백업"]] }
   };
-  const SUB_LEAD = { strategy: "작가님이 정한 방향과 공모를 고르는 기준", goals: "올해·3년 목표와 지금까지의 실적", execution: "목표를 위해 할 일, 앞으로 3개월, 예산", review: "지금 손볼 점과 잘 되고 있는 점",
+  const SUB_LEAD = { ideas: "떠오른 주제·장면·재료를 남겨 두고 키워 가는 곳", plans: "시리즈·전시·공모 출품처럼 한 덩어리로 준비하는 일", making: "만드는 중인 작품의 단계와 과정 사진 (필요한 작품만)", prep: "기획과 작품에 딸린 준비할 것",
+    strategy: "작가님이 정한 방향과 공모를 고르는 기준", goals: "올해·3년 목표와 지금까지의 실적", execution: "목표를 위해 할 일, 앞으로 3개월, 예산", review: "지금 손볼 점과 잘 되고 있는 점",
     results: "지원 결과와 성과를 한눈에", works: "홈페이지 작품과 공모 출품 이력", history: "전시·수상 이력 — 홈페이지 CV가 기준이에요", sales: "작품 판매 기록", projects: "기획 중이거나 진행한 프로젝트",
     materials: "지원할 때 쓰는 CV·포트폴리오·작가노트", files: "구글 드라이브 자료실의 폴더와 파일", profile: "작가마다 다른 정보와 선호 기준", sources: "공모를 찾아보는 주최처·사이트·인스타그램", collect: "자동 수집이 읽은 공고와 결과", workspace: "화면 설정, 계정, 백업" };
   const SUB_AREA = Object.fromEntries(Object.entries(AREAS).flatMap(([a, o]) => o.subs.map(([k]) => [k, a])));
   const ROUTES = Object.assign({ home: ["home"], plan: ["plan"], calls: ["calls"], todo: ["plan"] },
     Object.fromEntries(Object.keys(SUB_AREA).map((k) => [k, ["artist", k]])),
-    { strat: ["artist", "strategy"], record: ["artist", "results"], docs: ["artist", "materials"], settings: ["artist", "profile"],
+    { work: ["artist", "ideas"], strat: ["artist", "strategy"], record: ["artist", "results"], docs: ["artist", "materials"], settings: ["artist", "profile"],
       criteria: ["artist", "strategy"], activity: ["artist", "execution"], status: ["artist", "review"], direction: ["artist", "strategy"], now: ["artist", "review"] });
   // 단계: 작가님이 버튼으로만 바꾼다. 저장값은 그대로 두고 화면 이름만 통일.
   const STATUSES = ["검토", "준비", "제출", "선정", "탈락", "보류", "패스"];
@@ -1727,6 +1730,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       ag.length ? h("div", { class: "agenda" }, ag.slice(0, 8).map(agRow)) : est("cal", "이번 주 일정이 없어요", null),
       ag.length > 8 ? moreBtn("그 밖에 " + (ag.length - 8) + "건", () => { planTab = "cal"; planMode = "week"; go("plan"); }) : null,
       props ? h("p", { class: "small muted", style: "margin:8px 0 0" }, "제안된 할 일 " + props + "건은 아직 일정에 없어요 · ", h("button", { class: "linkish", type: "button", onclick: () => { planTab = "todo"; todoSub = "proposed"; go("plan"); } }, "제안 보기")) : null]));
+    kids.push(workHomePanel());
 
     // 3) 진행 현황 — 단계별 숫자 (공모 탭과 같은 기준)
     kids.push(secH("list", "진행 현황", "공모 › 내 공모의 상태와 같은 숫자"));
@@ -2685,6 +2689,311 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     if (!strategy || ap.status === "확정") return null;
     return h("div", { class: "approve-strip" }, ic("alert", "ico"), h("span", {}, h("b", {}, "초안 · 작가님 확인 대기"), " — 아직 확정되지 않은 기준이 섞여 있어요. 확정은 ‘전략’에서 해요."), moreBtn("전략으로", () => go("strategy")));
   }
+
+  // ================= 작업 (아이디어 · 기획 · 작품 제작 · 준비) =================
+  // 작가님이 휴대폰·컴퓨터에서 직접 쓰는 작업창. 항목마다 정해진 칸이 있고, 쓰는 대로 자동 저장된다.
+  const WORK = {
+    ideas: { coll: "ideas", one: "아이디어", folder: "work/ideas", states: ["씨앗", "키우는 중", "기획으로", "보관"], def: "씨앗",
+      kinds: ["주제", "이미지·형태", "재료·기법", "시리즈", "전시", "기타"] },
+    plans: { coll: "plans", one: "기획", folder: "work/plans", states: ["구상", "준비", "진행", "완료", "보류"], def: "구상",
+      kinds: ["시리즈", "개인전", "그룹전", "공모 출품", "협업·프로젝트", "기타"] },
+    making: { coll: "wip", one: "작품", folder: "work/making", states: ["구상", "밑작업", "채색", "배접", "완성", "촬영", "홈페이지 등록"], def: "밑작업",
+      kinds: ["회화", "선면화", "기타"] }
+  };
+  const WORK_SUBS = ["ideas", "plans", "making", "prep"];
+  const PLAN_LIVE = ["구상", "준비", "진행"];
+  let ideas = null, plans = null, wip = null;
+  let workOpen = null;            // { sub, id } — 열려 있는 작업창
+  let edPending = {};             // 아직 저장 안 된 칸 { field: value }
+  let edTimer = null, edState = "idle", edSavedAt = null, deferRender = false;
+  let workFilter = { ideas: "진행", plans: "진행", making: "진행" };
+  const thumbCache = new Map();
+  const workRows = (sub) => (sub === "ideas" ? ideas : sub === "plans" ? plans : sub === "making" ? wip : null) || [];
+  const workDoc = (sub, id) => workRows(sub).find((x) => x._id === id) || null;
+  const planName = (id) => { const p = (plans || []).find((x) => x._id === id); return p ? (p.title || "제목 없는 기획") : null; };
+  const planTasks = (pid) => (tasks || []).filter((t) => !t.cancelled && t.planId === pid);
+  const wipTasks = (wid) => (tasks || []).filter((t) => !t.cancelled && t.wipId === wid);
+  const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  const isEditing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest(".wed") && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && !["checkbox", "file", "button"].includes(a.type)))); };
+
+  // 자동 저장: 칸을 바꾸면 0.7초 뒤 한꺼번에 저장. 저장 중 화면을 다시 그리지 않아 한글 입력이 끊기지 않는다.
+  function edSet(field, value) {
+    if (!workOpen || !canWrite) return;
+    edPending[field] = value; edState = "dirty"; paintSave();
+    clearTimeout(edTimer); edTimer = setTimeout(edFlush, 700);
+  }
+  async function edFlush() {
+    clearTimeout(edTimer);
+    if (!workOpen || !Object.keys(edPending).length) return;
+    const W = WORK[workOpen.sub]; const id = workOpen.id; const patch = Object.assign({}, edPending, { updatedAt: stamp() });
+    edPending = {}; edState = "saving"; paintSave();
+    try { await db.collection(W.coll).doc(id).update(patch); edState = "saved"; edSavedAt = nowHM(); }
+    catch (e) { edPending = Object.assign({}, patch, edPending); delete edPending.updatedAt; edState = "error"; }
+    paintSave();
+  }
+  function paintSave() {
+    const el = $("ed-save"); if (!el) return;
+    el.className = "ed-save " + edState;
+    el.textContent = edState === "dirty" ? "입력 중…" : edState === "saving" ? "저장 중…" : edState === "saved" ? "저장됨 " + (edSavedAt || "") : edState === "error" ? "저장 실패 · 다시 시도" : canWrite ? "자동 저장" : "보기 전용";
+  }
+  function openWork(sub, id) { edFlush(); edPending = {}; edState = "idle"; go(sub + "~" + id); }
+  async function closeWork() {
+    await edFlush();
+    const cur = workOpen; workOpen = null;
+    if (cur && cur.sub !== "prep") {
+      const d = workDoc(cur.sub, cur.id);
+      // 아무것도 안 쓴 새 항목은 지운다
+      if (d && canWrite && !d.title && !d.body && !(d.files || []).length && !(d.links || []).length && !d.summary && !d.concept) { try { await db.collection(WORK[cur.sub].coll).doc(cur.id).delete(); } catch (e) {} }
+    }
+    go(cur ? cur.sub : "ideas");
+  }
+  async function newWork(sub, init) {
+    const W = WORK[sub];
+    const base = Object.assign({ title: "", status: W.def, files: [], links: [], createdAt: stamp(), updatedAt: stamp(), by: window.DESK && window.DESK.email ? window.DESK.email() : null }, init || {});
+    let ref = null;
+    const ok = await write(W.coll + ":new", async () => { ref = await db.collection(W.coll).add(base); }, null);
+    if (ok && ref) openWork(sub, ref.id);
+  }
+
+  // 썸네일: 비공개 파일이라 열람 주소를 받아 와서 붙인다 (1시간 캐시)
+  function thumbImg(ref, cls) {
+    const img = h("img", { class: cls || "th", alt: ref.name || "", loading: "lazy", "data-path": ref.path });
+    const c = thumbCache.get(ref.path); if (c && c.until > Date.now()) img.src = c.url;
+    return img;
+  }
+  async function hydrateThumbs(root) {
+    if (!filesApi || !root) return;
+    for (const img of root.querySelectorAll("img[data-path]:not([src])")) {
+      const p = img.getAttribute("data-path");
+      try { let c = thumbCache.get(p); if (!c || c.until < Date.now()) { c = { url: await filesApi.url(p, 3600), until: Date.now() + 3300e3 }; thumbCache.set(p, c); } img.src = c.url; } catch (e) { img.classList.add("noimg"); }
+    }
+  }
+  const isImg = (r) => /^image\//.test(r.type || "") || /\.(jpe?g|png|webp|gif|heic)$/i.test(r.name || "");
+
+  // ---------- 목록 화면 ----------
+  function renderWork(sub) {
+    if (ideas === null || plans === null || wip === null) return [empty("불러오는 중입니다.")];
+    const listEl = sub === "ideas" ? ideasList() : sub === "plans" ? plansList() : sub === "making" ? makingList() : prepPage();
+    if (!workOpen || workOpen.sub !== sub) return [listEl];
+    const d = workDoc(sub, workOpen.id);
+    if (!d) return [listEl];
+    return [h("div", { class: "wsplit" }, h("div", { class: "wsplit-l" }, listEl), h("div", { class: "wsplit-r" }, workEditor(sub, d)))];
+  }
+  const segF = (sub, opts) => h("div", { class: "seg2 wseg", role: "group" }, opts.map(([v, l, n]) => h("button", { type: "button", "aria-pressed": String(workFilter[sub] === v), onclick: () => { workFilter[sub] = v; renderAll(); } }, l, n != null ? h("small", {}, " " + n) : null)));
+
+  function ideasList() {
+    const all = (ideas || []).slice().sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+    const act = all.filter((x) => ["씨앗", "키우는 중"].includes(x.status || "씨앗"));
+    const shown = workFilter.ideas === "진행" ? act : workFilter.ideas === "전체" ? all : all.filter((x) => (x.status || "씨앗") === workFilter.ideas);
+    const quick = canWrite ? quickIdea() : null;
+    return h("div", { class: "wlist" },
+      quick,
+      h("div", { class: "wtool" }, segF("ideas", [["진행", "키우는 것", act.length], ["기획으로", "기획으로 간 것", all.filter((x) => x.status === "기획으로").length], ["보관", "보관", all.filter((x) => x.status === "보관").length], ["전체", "전체", all.length]])),
+      shown.length ? h("div", { class: "icards" + (workOpen ? " narrow" : "") }, shown.map(ideaCard)) : est("sparkle", "아직 적어 둔 아이디어가 없어요", "떠오른 장면·색·문장을 한 줄이라도 남겨 두면 나중에 기획으로 키울 수 있어요."));
+  }
+  function ideaCard(x) {
+    const img = (x.files || []).find(isImg);
+    const on = workOpen && workOpen.id === x._id;
+    return h("button", { class: "icard" + (on ? " on" : ""), type: "button", onclick: () => openWork("ideas", x._id) },
+      img ? thumbImg(img, "ic-img") : null,
+      h("span", { class: "ic-b" },
+        h("b", {}, x.title || "제목 없음"),
+        x.body ? h("span", { class: "ic-t" }, String(x.body).slice(0, 90)) : null,
+        h("span", { class: "ic-m" }, h("span", { class: "wst st-" + (x.status || "씨앗") }, x.status || "씨앗"), x.kind ? h("span", {}, x.kind) : null, (x.tags || []).slice(0, 3).map((t) => h("span", { class: "tg" }, "#" + t)), x.planId && planName(x.planId) ? h("span", {}, "→ " + planName(x.planId)) : null)));
+  }
+  // 빠른 메모: 한 줄 + 사진 → 바로 아이디어로
+  function quickIdea() {
+    const ta = h("textarea", { class: "qi-t", rows: "2", placeholder: "떠오른 것을 바로 적어 두세요 — 첫 줄이 제목이 돼요", "aria-label": "새 아이디어" });
+    const pics = []; const prev = h("div", { class: "shots" });
+    const inp = h("input", { type: "file", accept: "image/*", multiple: true, class: "vh", onchange: (e) => { for (const f of Array.from(e.target.files || [])) pics.push(f); e.target.value = ""; prev.replaceChildren(...pics.map((f) => h("img", { src: URL.createObjectURL(f), alt: f.name }))); } });
+    const save = B("남기기", { kind: "primary", size: "sm", icon: "check", onclick: async () => {
+      const txt = ta.value.trim(); if (!txt && !pics.length) { ta.focus(); return; }
+      save.disabled = true;
+      let files = []; try { if (pics.length) files = await uploadMany(pics, WORK.ideas.folder); } catch (e) { toast("사진을 올리지 못했어요. 글만 저장할게요."); }
+      const [first, ...rest] = txt.split("\n");
+      await write("ideas:new", () => db.collection("ideas").add({ title: (first || "사진 메모").slice(0, 60), body: (first && first.length > 60 ? first + "\n" : "") + rest.join("\n").trim(), status: "씨앗", files, links: [], createdAt: stamp(), updatedAt: stamp(), by: window.DESK && window.DESK.email ? window.DESK.email() : null }), "아이디어를 남겼어요");
+      ta.value = ""; pics.length = 0; prev.replaceChildren(); save.disabled = false;
+    } });
+    return h("div", { class: "qi" }, ta, prev, h("div", { class: "qi-a" }, filesApi ? h("label", { class: "btn sm ghost qi-pic" }, ic("image"), "사진", inp) : h("span"), h("span", { class: "r" }, B("자세히 쓰기", { size: "sm", kind: "ghost", onclick: () => newWork("ideas", { title: ta.value.trim().split("\n")[0].slice(0, 60), body: ta.value.trim().split("\n").slice(1).join("\n") }) }), save)));
+  }
+
+  function plansList() {
+    const all = (plans || []).slice().sort((a, b) => PLAN_LIVE.indexOf(a.status) - PLAN_LIVE.indexOf(b.status) || String(a.start || "9").localeCompare(String(b.start || "9")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+    const act = all.filter((x) => PLAN_LIVE.includes(x.status || "구상"));
+    const shown = workFilter.plans === "진행" ? act : workFilter.plans === "전체" ? all : all.filter((x) => x.status === workFilter.plans);
+    return h("div", { class: "wlist" },
+      h("div", { class: "wtool" }, segF("plans", [["진행", "진행 중", act.length], ["완료", "완료", all.filter((x) => x.status === "완료").length], ["보류", "보류", all.filter((x) => x.status === "보류").length], ["전체", "전체", all.length]]),
+        canWrite ? B("새 기획", { size: "sm", icon: "plus", onclick: () => newWork("plans") }) : null),
+      shown.length ? h("div", { class: "prows" }, shown.map((p) => {
+        const ts = planTasks(p._id), dn = ts.filter((t) => t.done).length;
+        const on = workOpen && workOpen.id === p._id;
+        return h("button", { class: "prow" + (on ? " on" : ""), type: "button", onclick: () => openWork("plans", p._id) },
+          h("span", { class: "pr-h" }, h("b", {}, p.title || "제목 없는 기획"), h("span", { class: "wst st-" + (p.status || "구상") }, p.status || "구상")),
+          p.summary ? h("span", { class: "pr-s" }, p.summary) : null,
+          h("span", { class: "pr-m" }, [p.kind, p.start || p.end ? [fmt(p.start), fmt(p.end)].filter(Boolean).join(" – ") : null, ts.length ? "준비 " + dn + "/" + ts.length : null, (p.callIds || []).length ? "공모 " + p.callIds.length : null, (wip || []).filter((w) => w.planId === p._id).length ? "작품 " + (wip || []).filter((w) => w.planId === p._id).length : null].filter(Boolean).map((t) => h("span", {}, t))),
+          ts.length ? h("span", { class: "pr-bar" }, h("i", { style: "width:" + Math.round(dn / ts.length * 100) + "%" })) : null);
+      })) : est("folder", workFilter.plans === "진행" ? "진행 중인 기획이 없어요" : "기획이 없어요", "시리즈·개인전·공모 출품처럼 한 덩어리로 준비하는 일을 기획으로 만들어 두세요.", canWrite ? B("새 기획", { size: "sm", icon: "plus", onclick: () => newWork("plans") }) : null));
+  }
+
+  function makingList() {
+    const ST = WORK.making.states;
+    const all = (wip || []).slice().sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+    const act = all.filter((w) => !["홈페이지 등록"].includes(w.status));
+    const shown = workFilter.making === "진행" ? act : all;
+    const card = (w) => { const img = (w.files || []).filter(isImg).slice(-1)[0]; const on = workOpen && workOpen.id === w._id;
+      return h("button", { class: "mcard" + (on ? " on" : ""), type: "button", onclick: () => openWork("making", w._id) }, img ? thumbImg(img, "mc-img") : h("span", { class: "mc-img ph" }, ic("image")),
+        h("span", { class: "mc-b" }, h("b", {}, w.title || "가제 없음"), h("span", { class: "small muted" }, [w.size, w.medium].filter(Boolean).join(" · ") || " "), w.planId && planName(w.planId) ? h("span", { class: "small muted" }, "기획 · " + planName(w.planId)) : null)); };
+    const stOf = (w) => w.status || "밑작업";
+    const strip = h("div", { class: "mstrip", "aria-label": "단계별 작품 수" }, ST.map((s) => { const n = all.filter((w) => stOf(w) === s).length; return h("span", { class: "ms" + (n ? " has" : "") }, s, h("b", {}, n)); }));
+    const cols = ST.filter((s) => shown.some((w) => stOf(w) === s));
+    const board = h("div", { class: "mboard" + (workOpen ? " narrow" : "") }, cols.map((s) => { const ws = shown.filter((w) => stOf(w) === s);
+      return h("div", { class: "mcol" }, h("div", { class: "mcol-h" }, s, h("small", {}, ws.length)), ws.map(card)); }));
+    return h("div", { class: "wlist" },
+      h("div", { class: "wtool" }, segF("making", [["진행", "만드는 중", act.length], ["전체", "전체", all.length]]), canWrite ? B("작품 추가", { size: "sm", icon: "plus", onclick: () => newWork("making") }) : null),
+      h("p", { class: "small muted wnote" }, "모든 작품을 올릴 필요는 없어요. 과정을 남겨 두고 싶은 작품만 추가하세요. 홈페이지에 등록하면 기록 › 작품에 나타나요."),
+      all.length ? [strip, board] : est("image", "만드는 중인 작품이 없어요", "가제와 크기만 적고, 단계가 바뀔 때마다 사진을 남겨 두면 작업 과정 기록이 돼요.", canWrite ? B("작품 추가", { size: "sm", icon: "plus", onclick: () => newWork("making") }) : null));
+  }
+
+  // 준비: 기획·작품에 붙은 할 일을 기획별로 (같은 할 일 데이터 — 일정 › 할 일에도 보임)
+  function prepPage() {
+    const groups = [];
+    for (const p of (plans || []).filter((x) => PLAN_LIVE.includes(x.status || "구상"))) groups.push({ key: "p:" + p._id, title: p.title || "제목 없는 기획", sub: [p.status, p.kind].filter(Boolean).join(" · "), list: planTasks(p._id), add: { planId: p._id, planName: p.title || null }, open: () => openWork("plans", p._id) });
+    for (const w of (wip || []).filter((x) => wipTasks(x._id).length)) groups.push({ key: "w:" + w._id, title: "작품 · " + (w.title || "가제 없음"), sub: w.status, list: wipTasks(w._id), add: { wipId: w._id }, open: () => openWork("making", w._id) });
+    const openN = groups.reduce((n, g) => n + g.list.filter((t) => !t.done).length, 0);
+    return h("div", { class: "wlist" },
+      h("p", { class: "small muted wnote" }, "기획과 작품에 딸린 준비할 것이에요. 날짜를 넣으면 일정에도 보여요. 기획에 묶이지 않은 할 일은 일정 › 할 일에 있어요."),
+      groups.length ? h("div", { class: "pgroups" }, groups.map((g) => {
+        const open = g.list.filter((t) => !t.done).sort((a, b) => String(a.due || "9").localeCompare(String(b.due || "9"))), done = g.list.filter((t) => t.done);
+        return h("section", { class: "panel pg" }, h("div", { class: "p-head" }, h("h2", {}, h("button", { class: "linkish", type: "button", onclick: g.open }, g.title), cntB(open.length || null)), h("span", { class: "small muted" }, g.sub || "")),
+          prepList(open, done, g.add));
+      })) : est("check", "준비할 것이 없어요", "기획을 만들고 그 안에서 준비할 것을 적으면 여기에 모여요.", canWrite ? B("새 기획", { size: "sm", icon: "plus", onclick: () => newWork("plans") }) : null),
+      openN ? null : null);
+  }
+  function prepList(open, done, addTo) {
+    const row = (t) => h("div", { class: "pt" + (t.done ? " done" : "") },
+      h("label", { class: "pt-c" }, h("input", { type: "checkbox", checked: !!t.done, disabled: !canWrite, onchange: () => toggleTask(t) }), h("span", {}, t.title)),
+      h("span", { class: "pt-m" }, t.due ? h("span", { class: "small " + (t.due < TODAY && !t.done ? "late" : "muted") }, fmt(t.due)) : null, canWrite ? h("button", { class: "iconbtn plain sm", type: "button", "aria-label": "고치기", onclick: () => openForm("tasks", t) }, ic("edit")) : null));
+    const add = canWrite ? (() => {
+      const ti = h("input", { type: "text", placeholder: "준비할 것 추가 (예: 한지 주문, 액자 견적)", "aria-label": "준비할 것" }), du = h("input", { type: "date", "aria-label": "날짜 (선택)" });
+      const go2 = async () => { const v = ti.value.trim(); if (!v) return; ti.value = ""; await write("tasks:new", () => db.collection("tasks").add(Object.assign({ title: v, due: du.value || null, cat: "작품", done: false, proposed: false, createdAt: stamp(), updatedAt: stamp() }, addTo)), null); du.value = ""; ti.focus(); };
+      ti.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); go2(); } });
+      return h("div", { class: "pt-add" }, ti, du, B("추가", { size: "sm", onclick: go2 }));
+    })() : null;
+    return h("div", { class: "ptl" }, open.map(row), add, done.length ? h("details", { class: "pt-done" }, h("summary", {}, "끝난 것 " + done.length), done.map(row)) : null);
+  }
+
+  // ---------- 작업창 (편집기) ----------
+  function workEditor(sub, d) {
+    const W = WORK[sub]; const v = Object.assign({}, d, edPending); const ro = !canWrite;
+    const field = (k, o) => {
+      o = o || {};
+      const id = "wf-" + k;
+      if (o.t === "area") {
+        const ta = h("textarea", { id, class: "wf-area", rows: String(o.rows || 3), placeholder: o.ph || "", readOnly: ro, oninput: (e) => { autoGrow(e.target); edSet(k, o.lines ? e.target.value.split("\n").map((x) => x.trim()).filter(Boolean) : e.target.value); } });
+        ta.value = o.lines ? (v[k] || []).join("\n") : (v[k] || "");
+        return ta;
+      }
+      if (o.t === "select") { const s = h("select", { id, disabled: ro, onchange: (e) => { edSet(k, e.target.value || null); } }, h("option", { value: "" }, o.none || "선택"), o.opts.map((x) => Array.isArray(x) ? h("option", { value: x[0] }, x[1]) : h("option", { value: x }, x))); s.value = v[k] || ""; return s; }
+      const i = h("input", { id, type: o.t || "text", placeholder: o.ph || "", readOnly: ro, oninput: (e) => edSet(k, o.tags ? e.target.value.split(/[,#\s]+/).map((x) => x.trim()).filter(Boolean) : (e.target.value || null)) });
+      i.value = o.tags ? (v[k] || []).join(", ") : (v[k] || ""); return i;
+    };
+    const prop = (label, el) => h("div", { class: "wp" }, h("span", { class: "wp-k" }, label), h("div", { class: "wp-v" }, el));
+    const sec = (label, el, hint) => h("section", { class: "wsec" }, h("div", { class: "wsec-h" }, h("h3", {}, label), hint ? h("span", { class: "small muted" }, hint) : null), el);
+    // 상태: 단계 버튼 (클릭하면 바로 저장)
+    const states = h("div", { class: "wstates", role: "group", "aria-label": "상태" }, W.states.map((s) => h("button", { type: "button", disabled: ro, "aria-pressed": String((v.status || W.def) === s), onclick: () => { edSet("status", s); edFlush(); } }, s)));
+    let delArm2 = false;
+    const del = canWrite ? h("button", { class: "btn ghost sm", type: "button", title: "두 번 눌러야 지워져요", onclick: async (e) => {
+      const b = e.currentTarget; if (!delArm2) { delArm2 = true; b.textContent = "한 번 더 누르면 삭제"; setTimeout(() => { delArm2 = false; b.textContent = "삭제"; }, 3000); return; }
+      edPending = {}; const cur = workOpen; workOpen = null;
+      await write(W.coll + ":" + d._id, () => db.collection(W.coll).doc(d._id).delete(), W.one + "을(를) 지웠어요"); go(cur.sub);
+    } }, "삭제") : null;
+    const top = h("div", { class: "ed-top" }, h("button", { class: "btn ghost sm", type: "button", onclick: closeWork }, ic("chevL"), { ideas: "아이디어", plans: "기획", making: "작품 제작" }[sub] + " 목록"), h("span", { class: "ed-save", id: "ed-save" }), del);
+    const title = h("input", { id: "wf-title", class: "ed-title", placeholder: { ideas: "아이디어 이름", plans: "기획 이름 (예: 2027 봄 개인전 「곡선의 시간」)", making: "가제" }[sub], readOnly: ro, oninput: (e) => edSet("title", e.target.value) });
+    title.value = v.title || "";
+
+    const props = [prop("상태", states), prop("종류", field("kind", { t: "select", opts: W.kinds }))];
+    const body = [];
+    if (sub === "ideas") {
+      props.push(prop("태그", field("tags", { tags: 1, ph: "쉼표로 나눠 적기 (예: 곡선, 봉황, 금박)" })));
+      body.push(sec("내용", field("body", { t: "area", rows: 8, ph: "떠오른 장면, 색, 문장, 참고한 것… 자유롭게 적어요" })));
+    }
+    if (sub === "plans") {
+      const dates = h("div", { class: "wdates" }, field("start", { t: "date" }), h("span", { class: "muted" }, "–"), field("end", { t: "date" }));
+      props.push(prop("기간", dates), prop("장소·대상", field("venue", { ph: "예: 인사동 ○○갤러리 / 온라인 / 미정" })));
+      body.push(sec("한 줄 요약", field("summary", { ph: "이 기획을 한 문장으로" })),
+        sec("목적", field("purpose", { t: "area", rows: 3, ph: "왜 하나요? 무엇을 얻고 싶나요? (목표와 연결)" })),
+        sec("내용·콘셉트", field("concept", { t: "area", rows: 6, ph: "주제, 이야기, 전시 구성, 공간 쓰는 방식…" }), "기획안 문구로 다시 쓸 수 있게 정리해 두세요"),
+        sec("작품 구성", field("works", { t: "area", rows: 4, lines: 1, ph: "한 줄에 한 작품 (예: 곡선의 환희, 2024, 60×90)" }), "작품 제작에 올린 작품은 아래 ‘연결’에 함께 보여요"),
+        sec("예산·비용", field("budget", { t: "area", rows: 3, ph: "예: 대관 0 · 액자 120만 · 운송 30만 · 도록 80만" })),
+        sec("준비할 것", prepList(planTasks(d._id).filter((t) => !t.done).sort((a, b) => String(a.due || "9").localeCompare(String(b.due || "9"))), planTasks(d._id).filter((t) => t.done), { planId: d._id, planName: v.title || null }), "날짜를 넣으면 일정에도 보여요"),
+        sec("메모", field("body", { t: "area", rows: 4, ph: "회의 내용, 연락한 사람, 떠오른 것" })));
+    }
+    if (sub === "making") {
+      const planOpts = (plans || []).filter((p) => PLAN_LIVE.includes(p.status || "구상") || p._id === v.planId).map((p) => [p._id, p.title || "제목 없는 기획"]);
+      props.push(prop("크기", field("size", { ph: "예: 60×90cm" })), prop("재료", field("medium", { ph: "예: 한지에 먹, 채색, 배접" })), prop("시작한 날", field("startedAt", { t: "date" })), prop("기획", field("planId", { t: "select", opts: planOpts, none: "연결 안 함" })));
+      body.push(sec("작업 노트", field("body", { t: "area", rows: 6, ph: "단계마다 한 일, 다음에 할 것, 바꾸고 싶은 것" })),
+        sec("준비할 것", prepList(wipTasks(d._id).filter((t) => !t.done), wipTasks(d._id).filter((t) => t.done), { wipId: d._id }), null));
+    }
+    // 첨부 (사진·파일)
+    const files = v.files || [];
+    const fgrid = h("div", { class: "wfiles" }, files.map((r, i) => h("div", { class: "wfile" }, isImg(r) ? h("button", { type: "button", class: "wf-img", onclick: () => openFile(r) }, thumbImg(r)) : h("span", { class: "wf-doc" }, fileLink(r)),
+      h("div", { class: "wf-cap" }, sub === "making" && r.stage ? h("span", { class: "tag" }, r.stage) : null, h("span", { class: "small muted" }, r.at ? fmt(String(r.at).slice(0, 10)) : ""),
+        canWrite ? h("button", { class: "linkish small", type: "button", onclick: async () => { const nf = files.filter((_, j) => j !== i); edPending.files = nf; await edFlush(); try { if (filesApi) await filesApi.remove(r.path); } catch (e) {} } }, "빼기") : null))));
+    const up = canWrite && filesApi ? h("label", { class: "btn sm" }, ic("plus"), sub === "making" ? "과정 사진 올리기" : "사진·파일 올리기", h("input", { type: "file", multiple: true, class: "vh", accept: sub === "plans" ? null : "image/*,application/pdf", onchange: async (e) => {
+      const list = Array.from(e.target.files || []); e.target.value = ""; if (!list.length) return;
+      toast("올리는 중… (" + list.length + "개)");
+      try { const refs = await uploadMany(list, W.folder, sub === "making" ? { stage: v.status || W.def } : null); edPending.files = (workDoc(sub, d._id) || d).files ? ((workDoc(sub, d._id) || d).files || []).concat(refs) : refs; await edFlush(); toast(refs.length + "개를 올렸어요"); }
+      catch (err) { toast("올리지 못했어요. 이미지·PDF·문서 파일인지, 50MB 이하인지 확인해 주세요."); }
+    } })) : null;
+    body.push(sec(sub === "making" ? "과정 사진" : "사진·파일", [files.length ? fgrid : h("p", { class: "small muted" }, sub === "making" ? "단계가 바뀔 때마다 한 장씩 남겨 두면 과정 기록이 돼요. 사진에는 그때의 단계가 함께 적혀요." : "스케치, 참고 이미지, 기획서 파일을 올려 두세요."), up]));
+    // 참고 링크
+    const links = v.links || [];
+    const lin = h("input", { type: "url", placeholder: "https:// 참고 링크 붙여 넣기", "aria-label": "참고 링크" });
+    const addLink = () => { const u = lin.value.trim(); if (!/^https?:\/\//.test(u)) { toast("https:// 로 시작하는 주소를 넣어 주세요"); return; } edPending.links = links.concat([{ url: u, at: stamp() }]); edFlush(); lin.value = ""; };
+    lin.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); addLink(); } });
+    body.push(sec("참고 링크", [links.length ? h("ul", { class: "wlinks" }, links.map((l, i) => h("li", {}, h("a", { href: l.url, target: "_blank", rel: "noopener" }, l.title || l.url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 70)), canWrite ? h("button", { class: "linkish small", type: "button", onclick: () => { edPending.links = links.filter((_, j) => j !== i); edFlush(); } }, "빼기") : null))) : null,
+      canWrite ? h("div", { class: "pt-add" }, lin, B("추가", { size: "sm", onclick: addLink })) : null]));
+    // 연결
+    const conn = [];
+    if (sub === "ideas") {
+      if (v.planId && planName(v.planId)) conn.push(h("div", { class: "wc" }, h("span", { class: "wc-k" }, "기획"), h("button", { class: "linkish", type: "button", onclick: () => openWork("plans", v.planId) }, planName(v.planId))));
+      else if (canWrite) conn.push(h("div", { class: "wc" }, h("span", { class: "wc-k" }, "다음 단계"), B("이 아이디어로 기획 만들기", { size: "sm", icon: "arrow", onclick: async () => {
+        await edFlush(); const cur = workDoc("ideas", d._id) || d; let ref = null;
+        const ok = await write("plans:new", async () => { ref = await db.collection("plans").add({ title: cur.title || "", status: "구상", kind: cur.kind === "시리즈" || cur.kind === "전시" ? (cur.kind === "전시" ? "개인전" : "시리즈") : null, concept: cur.body || "", files: cur.files || [], links: cur.links || [], ideaIds: [d._id], createdAt: stamp(), updatedAt: stamp(), by: window.DESK && window.DESK.email ? window.DESK.email() : null }); await db.collection("ideas").doc(d._id).update({ status: "기획으로", planId: ref.id, updatedAt: stamp() }); }, "기획을 만들었어요 — 내용·사진이 함께 옮겨졌어요");
+        if (ok && ref) openWork("plans", ref.id);
+      } })));
+    }
+    if (sub === "plans") {
+      const ids = (ideas || []).filter((x) => x.planId === d._id || (v.ideaIds || []).includes(x._id));
+      const ws = (wip || []).filter((w) => w.planId === d._id);
+      const cs = (v.callIds || []).map((cid) => (calls || []).find((c) => c._id === cid)).filter(Boolean);
+      const callSel = canWrite ? h("select", { "aria-label": "공모 연결", onchange: (e) => { const cid = e.target.value; if (!cid) return; edPending.callIds = (v.callIds || []).concat([cid]); edFlush(); } }, h("option", { value: "" }, "+ 공모 연결"), (calls || []).filter((c) => ["검토", "준비", "제출", "보류"].includes(c.status) && !(v.callIds || []).includes(c._id)).sort((a, b) => String(a.deadline || "9").localeCompare(String(b.deadline || "9"))).slice(0, 80).map((c) => h("option", { value: c._id }, (c.deadline ? fmt(c.deadline).slice(2) + " · " : "") + c.name.slice(0, 50)))) : null;
+      conn.push(h("div", { class: "wc" }, h("span", { class: "wc-k" }, "공모"), h("div", { class: "wc-v" }, cs.map((c, i) => h("span", { class: "wc-i" }, h("button", { class: "linkish", type: "button", onclick: () => openDetail(c._id) }, c.name), h("span", { class: "small muted" }, " " + (SLABEL[c.status] || "") + (c.deadline ? " · " + fmt(c.deadline) : "")), canWrite ? h("button", { class: "linkish small", type: "button", onclick: () => { edPending.callIds = (v.callIds || []).filter((_, j) => j !== i); edFlush(); } }, " 빼기") : null)), callSel)));
+      conn.push(h("div", { class: "wc" }, h("span", { class: "wc-k" }, "작품"), h("div", { class: "wc-v" }, ws.map((w) => h("button", { class: "linkish", type: "button", onclick: () => openWork("making", w._id) }, (w.title || "가제 없음") + " · " + (w.status || ""))), canWrite ? h("button", { class: "linkish small", type: "button", onclick: () => newWork("making", { planId: d._id }) }, "+ 만들 작품 추가") : null)));
+      if (ids.length) conn.push(h("div", { class: "wc" }, h("span", { class: "wc-k" }, "아이디어"), h("div", { class: "wc-v" }, ids.map((x) => h("button", { class: "linkish", type: "button", onclick: () => openWork("ideas", x._id) }, x.title || "제목 없음")))));
+    }
+    if (sub === "making" && v.planId && planName(v.planId)) conn.push(h("div", { class: "wc" }, h("span", { class: "wc-k" }, "기획"), h("button", { class: "linkish", type: "button", onclick: () => openWork("plans", v.planId) }, planName(v.planId))));
+    if (conn.length) body.push(sec("연결", h("div", { class: "wconn" }, conn)));
+    const meta = h("p", { class: "small muted ed-meta" }, [d.createdAt ? "만든 날 " + fmt(String(d.createdAt).slice(0, 10)) : null, d.updatedAt ? "마지막 수정 " + fmt(String(d.updatedAt).slice(0, 10)) + " " + String(d.updatedAt).slice(11, 16) : null].filter(Boolean).join(" · "));
+    const ed = h("article", { class: "wed", "data-key": sub + ":" + d._id }, top, title, h("div", { class: "wprops" }, props), body, meta);
+    ed.addEventListener("focusout", () => setTimeout(() => { if (deferRender && !isEditing()) { deferRender = false; renderAll(); } }, 60));
+    return ed;
+  }
+  function autoGrow(t) { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 2, 1400) + "px"; }
+
+  // 홈 '작업 중' 칸
+  function workHomePanel() {
+    if (!plans || !wip || !ideas) return null;
+    const ap = (plans || []).filter((p) => ["준비", "진행"].includes(p.status)).slice(0, 3);
+    const mk = (wip || []).filter((w) => !["완성", "촬영", "홈페이지 등록"].includes(w.status));
+    const seeds = (ideas || []).filter((x) => ["씨앗", "키우는 중"].includes(x.status || "씨앗"));
+    if (!ap.length && !mk.length && !seeds.length) return card({ title: "작업 중", right: moreBtn("작업", () => go("ideas")) }, est("sparkle", "작업 메뉴에 아이디어·기획을 남겨 보세요", "떠오른 것은 아이디어로, 준비하는 전시·시리즈는 기획으로 정리해요."));
+    return card({ title: "작업 중", right: moreBtn("작업", () => go("plans")) }, h("div", { class: "rows" },
+      ap.map((p) => { const nx = planTasks(p._id).filter((t) => !t.done).sort((a, b) => String(a.due || "9").localeCompare(String(b.due || "9")))[0];
+        return h("div", { class: "row" }, h("div", { class: "row-main" }, h("button", { class: "linkish", type: "button", onclick: () => openWork("plans", p._id) }, p.title || "제목 없는 기획"), h("div", { class: "row-meta" }, h("span", {}, p.status), p.kind ? h("span", {}, p.kind) : null, nx ? h("span", {}, "다음 · " + nx.title + (nx.due ? " (" + fmt(nx.due) + ")" : "")) : h("span", {}, "준비할 것 없음")))); }),
+      h("div", { class: "row" }, h("div", { class: "row-main" }, h("div", { class: "row-meta" }, h("button", { class: "linkish small", type: "button", onclick: () => go("making") }, "만드는 중인 작품 " + mk.length), h("button", { class: "linkish small", type: "button", onclick: () => go("ideas") }, "키우는 아이디어 " + seeds.length))))));
+  }
+
   function renderArtist() {
     const el = $("v-artist");
     const area = SUB_AREA[artistSub] || "strat"; const A = AREAS[area];
@@ -2704,6 +3013,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       case "history": body = [renderHistory()]; break;
       case "sales": { const r = renderRecord(); body = Array.isArray(r) ? r : [r.sales]; break; }
       case "projects": { const r = renderRecord(); body = Array.isArray(r) ? r : [r.props || est("file", "아직 프로젝트·기획안이 없어요", "개인전 기획안이나 공모에 다시 쓸 작품 묶음을 여기에 모아요.")]; break; }
+      case "ideas": case "plans": case "making": case "prep": body = renderWork(artistSub); break;
       case "materials": body = renderMaterialsPage(); break;
       case "files": body = [renderDrive()]; break;
       case "profile": body = renderProfileSettings(); break;
@@ -2713,6 +3023,8 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       default: body = [];
     }
     el.replaceChildren(...clean([nav, body]));
+    el.classList.toggle("editing", !!(workOpen && WORK_SUBS.includes(artistSub)));
+    if (WORK_SUBS.includes(artistSub)) { hydrateThumbs(el); for (const t of el.querySelectorAll(".wf-area")) autoGrow(t); paintSave(); }
     if (artistSub === "strategy" && dirFocus) { const r = $("req-text"); if (r) { r.focus(); r.setSelectionRange(r.value.length, r.value.length); } }
   }
   const secNum = (n, t, sub, right) => h("div", { class: "sec-title" }, h("span", { class: "num" }, String(n).padStart(2, "0")), h("div", {}, h("h2", {}, t), sub ? h("p", { class: "small muted" }, sub) : null), right ? h("div", { class: "r" }, right) : null);
@@ -2727,7 +3039,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     const groups = [...new Set(M.map((x) => x.group))];
     const evalPanel = panel("공모 평가 기준", "공모를 고를 때 보는 다섯 항목 · 근거가 없는 항목은 점수를 주지 않아요", [
       h("div", { class: "eval-groups" }, groups.map((g) => h("div", { class: "eg" }, h("p", { class: "eg-h" }, g, h("span", { class: "mono" }, M.filter((x) => x.group === g).reduce((a, x) => a + x.weight, 0) + "%")),
-        M.filter((x) => x.group === g).map((x) => h("div", { class: "eg-row" }, h("div", { class: "eg-t" }, h("b", {}, x.name), h("span", { class: "mono" }, x.weight + "%")), h("span", { class: "wbar" }, h("i", { style: "width:" + x.weight * 2.5 + "%" })), h("p", { class: "small muted" }, x.def)))))),
+        M.filter((x) => x.group === g).map((x) => h("div", { class: "eg-row" }, h("div", { class: "eg-t" }, h("b", {}, x.name), h("span", { class: "mono" }, x.weight + "%")), h("span", { class: "wtool" }, h("i", { style: "width:" + x.weight * 2.5 + "%" })), h("p", { class: "small muted" }, x.def)))))),
       h("p", { class: "small muted" }, "비중은 기본값이에요. 작가마다 조정할 수 있고, 종합 점수는 근거가 있는 항목이 3개 이상일 때만 내요. " + (s.evalModel ? "" : "(아직 작가님이 정한 비중이 없어 기본값을 써요)"))]);
     const hardR = rulesList().filter((r) => ruleLevel(r.id) === "필수"), softR = rulesList().filter((r) => ruleLevel(r.id) !== "필수");
     const ruleRow = (r) => { const n = blocked.filter((c) => ruleFlags(c).includes(r.id)).length;
@@ -3373,7 +3685,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     let filename, data;
     if (kind === "json") {
       filename = "이현정_전시기록부_백업_" + day + ".json";
-      data = JSON.stringify({ exportedAt: stamp(), calls, tasks, events, exhibitions, requests, inbox, settings: { strategy, situation, catalog, sources, drive } }, null, 1);
+      data = JSON.stringify({ exportedAt: stamp(), calls, tasks, events, exhibitions, requests, inbox, ideas, plans, wip, kit, files: fileDocs, settings: { strategy, situation, catalog, sources, drive } }, null, 1);
     } else {
       const cols = [["name", "공모"], ["status", "단계"], ["deadline", "마감"], ["format", "형식"], ["hostType", "주관"], ["region", "지역"], ["organizer", "주최"], ["submittedAt", "제출일"], ["resultDate", "결과 예정"], ["works", "출품작"], ["feeAmount", "응모비"], ["feeCur", "통화"], ["cost", "예상 비용(만원)"], ["url", "링크"]];
       const esc = (v) => { const s = Array.isArray(v) ? v.join(" / ") : v == null ? "" : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
@@ -3659,6 +3971,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       { k: "due", l: "날짜", t: "date" }, { k: "endDate", l: "끝나는 날 (여러 날이면)", t: "date" },
       { k: "amount", l: "금액", t: "number", only: "결제", ph: "숫자만 (예: 45)" }, { k: "cur", l: "단위", t: "select", o: MONEY, only: "결제" },
       { k: "callId", l: "어느 공모 일인가요?", none: "공모와 상관없음", t: "select", o: callOptions(rec && rec.callId), wide: 1 },
+      { k: "planId", l: "어느 기획 일인가요?", none: "기획과 상관없음", t: "select", o: (plans || []).filter((p) => PLAN_LIVE.includes(p.status || "구상") || (rec && rec.planId === p._id)).map((p) => [p._id, p.title || "제목 없는 기획"]), wide: 1 },
       { k: "note", l: "메모", t: "textarea", wide: 1, ph: "필요하면 적어 두세요" }
     ],
     events: () => [{ k: "title", l: "일정", req: 1, wide: 1 }, { k: "date", l: "날짜", t: "date", req: 1 }, { k: "endDate", l: "끝나는 날 (여러 날이면)", t: "date" }, { k: "kind", l: "종류", t: "select", o: EV_KINDS }, { k: "note", l: "메모", t: "textarea", wide: 1 }],
@@ -3744,6 +4057,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
         if (body.endDate && body.due && body.endDate < body.due) { err.textContent = "끝나는 날이 시작 날짜보다 빨라요."; err.hidden = false; return; }
         const c = body.callId ? (calls || []).find((x) => x._id === body.callId) : null;
         body.callName = c ? c.name : null;
+        body.planName = body.planId ? planName(body.planId) : null;
         if (c && !body.goal) body.goal = c.goal || null;
         if (catVal !== "결제") { body.amount = null; body.cur = null; }
         if (typeof body.amount !== "number") body.cur = null;
@@ -3805,6 +4119,9 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       if (view === "plan") { label = "+ 일정·할 일"; fn = () => openForm("tasks", null, { due: calSel >= TODAY ? calSel : TODAY }); }
       else if (view === "calls" && isAdmin()) { label = "+ 공모 추가"; fn = () => openForm("calls", null); }
       else if (view === "calls") { label = "+ 공모 제보"; fn = () => openForm("inbox", null); }
+      else if (view === "artist" && !workOpen && artistSub === "ideas") { label = "+ 아이디어"; fn = () => newWork("ideas"); }
+      else if (view === "artist" && !workOpen && artistSub === "plans") { label = "+ 새 기획"; fn = () => newWork("plans"); }
+      else if (view === "artist" && !workOpen && artistSub === "making") { label = "+ 작품 추가"; fn = () => newWork("making"); }
       else if (view === "home" && !isAdmin()) { label = "+ 공모 제보"; fn = () => openForm("inbox", null); }
       else if (view === "home") { label = "+ 일정·할 일"; fn = () => openForm("tasks", null, { due: TODAY }); }
     }
@@ -3852,12 +4169,17 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     renderFab();
   }
   function renderAll() {
+    if (view === "artist" && workOpen && isEditing()) { deferRender = true; return; }
     renderChrome();
     if (view === "home") renderHome(); else if (view === "plan") renderPlan(); else if (view === "calls") renderCalls(); else renderArtist();
     if (sheet && sheet.kind === "detail") renderDetail(false);
   }
   function go(r) { if (r === "artist") r = artistSub; if (location.hash !== "#" + r) location.hash = r; else route(r); }
-  function route(r) { if (r === "todo") planTab = "todo"; const m = ROUTES[r] || ROUTES.home; view = m[0]; if (m[1]) artistSub = m[1]; if (view === "artist" && SUB_AREA[artistSub] === "docs") startDrive(); renderAll(); window.scrollTo(0, 0); }
+  function route(r) {
+    const [r0, wid] = String(r || "").split("~");
+    if (workOpen && !(wid && workOpen.id === wid)) edFlush();
+    workOpen = wid && WORK[r0] ? { sub: r0, id: wid } : null; r = r0;
+    if (r === "todo") planTab = "todo"; const m = ROUTES[r] || ROUTES.home; view = m[0]; if (m[1]) artistSub = m[1]; if (view === "artist" && SUB_AREA[artistSub] === "docs") startDrive(); renderAll(); window.scrollTo(0, 0); }
   window.addEventListener("hashchange", () => route(location.hash.slice(1)));
   $("help").addEventListener("click", () => openHelp());
   $("gear").addEventListener("click", () => go("profile"));
@@ -3887,6 +4209,9 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     db.collection("requests").onSnapshot((s) => { requests = rows(s); renderAll(); }, () => {});
     db.collection("inbox").onSnapshot((s) => { inbox = rows(s); renderAll(); }, () => {});
     db.collection("kit").onSnapshot((s) => { kit = rows(s); renderAll(); }, () => {});
+    db.collection("ideas").onSnapshot((s) => { ideas = rows(s); renderAll(); }, () => {});
+    db.collection("plans").onSnapshot((s) => { plans = rows(s); renderAll(); }, () => {});
+    db.collection("wip").onSnapshot((s) => { wip = rows(s); renderAll(); }, () => {});
     db.collection("files").onSnapshot((s) => { fileDocs = rows(s); renderAll(); }, () => {});
     db.doc("settings/strategy").onSnapshot((s) => { strategy = s.exists ? s.data() : false; renderAll(); }, () => {});
     db.doc("settings/situation").onSnapshot((s) => { situation = s.exists ? s.data() : false; renderAll(); }, () => {});
