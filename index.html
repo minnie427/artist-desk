@@ -982,7 +982,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 .ag.interest { opacity: .85; }
 .ag.interest .linkish { color: var(--ink-2); }
 </style>
-<link rel="stylesheet" href="theme.css?v=10">
+<link rel="stylesheet" href="theme.css?v=12">
 </head>
 <body>
 <header class="topbar">
@@ -1050,20 +1050,20 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   const SITE = "https://leehyunjung.art";
   // 상단 메뉴: 홈 · 공모 · 일정 · 계획 · 기록 · 자료. 계획·기록·자료는 같은 화면 틀(v-artist)에 2차 탭으로 그린다.
   const AREAS = {
-    work: { label: "작업", lead: "아이디어에서 기획, 준비, 작품까지 — 작가님이 직접 쓰는 작업창", subs: [["ideas", "아이디어"], ["plans", "기획"], ["making", "작품 제작"], ["prep", "준비"]] },
+    work: { label: "작업", lead: "아이디어에서 기획, 준비, 작품까지 — 작가님이 직접 쓰는 작업창", subs: [["workhome", "개요"], ["ideas", "아이디어"], ["plans", "기획"], ["making", "작업 일지"], ["prep", "준비"]] },
     strat: { label: "계획", lead: "전략에서 실행까지 — 공모를 고르는 근거와 올해 할 일", subs: [["strategy", "전략"], ["goals", "목표"], ["execution", "실행"], ["review", "점검"]] },
     record: { label: "기록", lead: "실제로 한 활동과 작품이 쌓이는 곳 — 지원·제출 과정은 공모에서 관리해요", subs: [["results", "성과"], ["works", "작품"], ["history", "전시·수상"], ["sales", "판매"], ["projects", "프로젝트"]] },
     docs: { label: "자료", lead: "지원할 때 쓰는 파일과 문서 — 원본 파일은 구글 드라이브에 있어요", subs: [["materials", "지원자료"], ["files", "파일 보관함"]] },
     settings: { label: "설정", lead: "작가 워크스페이스 설정 — 작가마다 다른 값은 여기서 정해요", subs: [["profile", "작가 프로필"], ["sources", "수집처"], ["collect", "수집 현황"], ["workspace", "화면·백업"]] }
   };
-  const SUB_LEAD = { ideas: "떠오른 주제·장면·재료를 남겨 두고 키워 가는 곳", plans: "시리즈·전시·공모 출품처럼 한 덩어리로 준비하는 일", making: "만드는 중인 작품의 단계와 과정 사진 (필요한 작품만)", prep: "기획과 작품에 딸린 준비할 것",
+  const SUB_LEAD = { ideas: "떠오른 주제·장면·재료를 남겨 두고 키워 가는 곳", plans: "시리즈·전시·공모 출품처럼 한 덩어리로 준비하는 일", making: "작업 사진을 남기는 일지 — 찍어서 올리면 날짜가 자동으로 붙어요", workhome: "이번 주 할 것, 다가오는 일정, 최근 작업을 한눈에", prep: "기획과 작품에 딸린 준비할 것",
     strategy: "작가님이 정한 방향과 공모를 고르는 기준", goals: "올해·3년 목표와 지금까지의 실적", execution: "목표를 위해 할 일, 앞으로 3개월, 예산", review: "지금 손볼 점과 잘 되고 있는 점",
     results: "지원 결과와 성과를 한눈에", works: "홈페이지 작품과 공모 출품 이력", history: "전시·수상 이력 — 홈페이지 CV가 기준이에요", sales: "작품 판매 기록", projects: "기획 중이거나 진행한 프로젝트",
     materials: "지원할 때 쓰는 CV·포트폴리오·작가노트", files: "구글 드라이브 자료실의 폴더와 파일", profile: "작가마다 다른 정보와 선호 기준", sources: "공모를 찾아보는 주최처·사이트·인스타그램", collect: "자동 수집이 읽은 공고와 결과", workspace: "화면 설정, 계정, 백업" };
   const SUB_AREA = Object.fromEntries(Object.entries(AREAS).flatMap(([a, o]) => o.subs.map(([k]) => [k, a])));
   const ROUTES = Object.assign({ home: ["home"], plan: ["plan"], calls: ["calls"], todo: ["plan"] },
     Object.fromEntries(Object.keys(SUB_AREA).map((k) => [k, ["artist", k]])),
-    { work: ["artist", "ideas"], strat: ["artist", "strategy"], record: ["artist", "results"], docs: ["artist", "materials"], settings: ["artist", "profile"],
+    { work: ["artist", "workhome"], strat: ["artist", "strategy"], record: ["artist", "results"], docs: ["artist", "materials"], settings: ["artist", "profile"],
       criteria: ["artist", "strategy"], activity: ["artist", "execution"], status: ["artist", "review"], direction: ["artist", "strategy"], now: ["artist", "review"] });
   // 단계: 작가님이 버튼으로만 바꾼다. 저장값은 그대로 두고 화면 이름만 통일.
   const STATUSES = ["검토", "준비", "제출", "선정", "탈락", "보류", "패스"];
@@ -1315,13 +1315,20 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 
   // ---------- 공모 묶음 (한 곳에서 정의해 홈·공모·작가 탭 숫자가 같게) ----------
   const isOpen = (c) => { const k = dkey(c); return !k || k >= TODAY; };
+  // 오래돼서 더 할 일이 없는 공모 → 보관 (상태값은 그대로, 보는 위치만)
+  //  · 결과 대기: 결과일 + 30일, 결과일을 모르면 마감 + 60일 (둘 다 모르면 제출일 + 60일 또는 바로)
+  //  · 준비 중: 마감 + 14일 (그 전까지는 ‘조치 필요’)
+  const staleResult = (c) => c.status === "제출" && (c.resultDate ? c.resultDate < addDays(-30) : c.deadline ? c.deadline < addDays(-60) : (!c.submittedAt || String(c.submittedAt).slice(0, 10) < addDays(-60)));
+  const stalePrep = (c) => c.status === "준비" && !!c.deadline && c.deadline < addDays(-14);
   const G = {
     decide: (c) => c.status === "검토" && isOpen(c) && !ruleFlags(c).length,
     blocked: (c) => c.status === "검토" && isOpen(c) && ruleFlags(c).length > 0,
     later: (c) => c.status === "보류",
     expired: (c) => c.status === "검토" && !isOpen(c),
-    prep: (c) => c.status === "준비",
-    wait: (c) => c.status === "제출",
+    prep: (c) => c.status === "준비" && !stalePrep(c),
+    wait: (c) => c.status === "제출" && !staleResult(c),
+    unknown: (c) => staleResult(c),
+    prepEnded: (c) => stalePrep(c),
     won: (c) => c.status === "선정",
     lost: (c) => c.status === "탈락",
     pass: (c) => c.status === "패스"
@@ -1464,7 +1471,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   function decodeEnt(s) { const t = document.createElement("textarea"); t.innerHTML = String(s || ""); return t.value; }
   // 예전 이름(결정할 것·준비 중·결과…)으로 불러도 새 구조(탐색 / 내 공모)로 연결
   const TAB_ALIAS = { decide: ["mine", "decide"], review: ["mine", "decide"], prep: ["mine", "prep"], apply: ["mine", "prep"], late: ["mine", "action"], wait: ["mine", "result"], result: ["mine", "result"], done: ["archive", "won"], later: ["mine", "later"],
-    inbox: ["explore", "new"], feed: ["explore", "new"], explore: ["explore", "new"], blocked: ["explore", "check"], expected: ["explore", "expected"], archive: ["archive", "all"], pass: ["archive", "excluded"], expired: ["archive", "ended"], won: ["archive", "won"], lost: ["archive", "lost"], mine: ["mine", "decide"] };
+    inbox: ["explore", "new"], feed: ["explore", "new"], explore: ["explore", "new"], blocked: ["explore", "check"], expected: ["explore", "expected"], archive: ["archive", "all"], pass: ["archive", "excluded"], expired: ["archive", "ended"], won: ["archive", "won"], lost: ["archive", "lost"], unknown: ["archive", "unknown"], mine: ["mine", "decide"] };
   function openCalls(patch) {
     patch = Object.assign({}, patch || {});
     let t = patch.tab, s = patch.sub;
@@ -2149,8 +2156,8 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   // ================= 공모: 탐색(아직 고르지 않은 기회) / 내 공모(고른 공모를 결정→준비→결과까지) =================
   const MINE_ST = [
     ["decide", "결정 대기", (c) => G.decide(c) && isLive(c)],
-    ["prep", "준비 중", (c) => c.status === "준비"],
-    ["result", "결과 확인", (c) => c.status === "제출"],
+    ["prep", "준비 중", (c) => G.prep(c)],
+    ["result", "결과 확인", (c) => G.wait(c)],
     ["done", "완료", (c) => c.status === "선정" || c.status === "탈락"],
     ["later", "보류", (c) => c.status === "보류"]
   ];
@@ -2158,8 +2165,8 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   // 보관: 끝난 공모 — 지우지 않고 남겨 둔다
   const AR_F = [
     ["all", "전체", (c) => AR_F.slice(1).some(([, , f]) => f(c))],
-    ["won", "선정", (c) => c.status === "선정"], ["lost", "미선정", (c) => c.status === "탈락"],
-    ["excluded", "제외", (c) => c.status === "패스"], ["ended", "마감 지남", (c) => G.expired(c)]
+    ["won", "선정", (c) => c.status === "선정"], ["lost", "미선정", (c) => c.status === "탈락"], ["unknown", "결과 미확인", (c) => G.unknown(c)],
+    ["excluded", "제외", (c) => c.status === "패스"], ["ended", "마감 지남", (c) => G.expired(c) || G.prepEnded(c)]
   ];
   const EX_F = [
     ["new", "새 공모", "feed"], ["rec", "추천", "feed"], ["expected", "예상 공고", (c) => G.decide(c) && !isLive(c)], ["check", "조건 확인 필요", (c) => G.blocked(c)],
@@ -2220,7 +2227,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 
     const addBtn = canWrite ? (isAdmin() ? B("공모 추가", { kind: "primary", icon: "plus", cls: "ph-add", onclick: () => openForm("calls", null) }) : null) : null;
     const linkBtn = canWrite ? B("공모 제보", { icon: "link", cls: "ph-add", onclick: () => openForm("inbox", null) }) : null;
-    const LEADS = { explore: "새로 들어온 공모를 살펴보고, 마음에 들면 ‘검토 후보로’ — 진행 중으로 옮겨져요", mine: "고른 공모를 지원 결정 → 준비·제출 → 결과 확인까지", archive: "끝난 공모 — 결과가 나온 것, 제외한 것, 마감이 지난 것. 지우지 않고 남겨 둬요" };
+    const LEADS = { explore: "새로 들어온 공모를 살펴보고, 마음에 들면 ‘검토 후보로’ — 진행 중으로 옮겨져요", mine: "고른 공모를 지원 결정 → 준비·제출 → 결과 확인까지", archive: "더 할 일이 없는 공모 — 결과가 나온 것, 결과일이 한참 지난 것(결과 미확인), 제외한 것, 마감이 지난 것. 지우지 않고 남겨 두고, 결과는 언제든 적을 수 있어요" };
     const kids = [pageH("공모", LEADS[cv.tab] || LEADS.mine, h("div", { class: "r" }, linkBtn, addBtn))];
     // 1단계: 탐색 / 내 공모 (데스크톱은 왼쪽 메뉴에 있음)
     const cc = callCounts();
@@ -2400,8 +2407,8 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   const fitsLimit = (t, limit) => { if (!limit) return null; const c = textCount(t); const n = limit.unit === "단어" ? c.words : c.all; return { ok: limit.min ? n >= limit.n : n <= limit.n, n }; };
   const limitL = (l) => l.n.toLocaleString() + l.unit + (l.min ? " 이상" : " 이내");
   function bestBlock(kind, lang, limit) {
-    const k2 = kind === "cv" ? "cvtext" : kind;
-    const cand = (kit || []).filter((b) => b.kind === k2 && b.text && (!lang || (b.lang || "ko") === lang));
+    const k2 = kind === "cv" ? "cvtext" : kind === "work-free" ? "work" : kind;
+    const cand = (kit || []).filter((b) => b.kind === k2 && b.text && (!lang || (b.lang || "ko") === lang) && !(kind === "work-free" && b.workNo));
     if (!cand.length) return { block: null, others: [] };
     const scored = cand.map((b) => ({ b, f: fitsLimit(b.text, limit), n: textCount(b.text).all })).sort((x, y) => {
       if (limit) { if ((x.f && x.f.ok) !== (y.f && y.f.ok)) return x.f && x.f.ok ? -1 : 1; return (x.f.ok !== !!limit.min) ? y.n - x.n : x.n - y.n; }
@@ -2409,13 +2416,33 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     });
     return { block: scored[0].b, fit: scored[0].f, others: scored.slice(1).map((x) => x.b) };
   }
-  function kitBlockLine(b, limit) {
+  function kitBlockLine(b, limit, opts) {
+    opts = opts || {};
     const f = fitsLimit(b.text, limit);
-    return h("div", { class: "kb" },
-      h("div", { class: "kb-h" }, h("b", {}, b.title || KIND_L[b.kind]), h("span", { class: "tag" }, LANG_L[b.lang] || "국문"),
+    const ok = canWrite && b.draft ? B("확인함", { size: "sm", kind: "ghost", icon: "check", onclick: () => write("kit:" + b._id, () => db.collection("kit").doc(b._id).update({ draft: false, checkedAt: stamp(), checkedBy: meEmail() }), "확인한 문구로 바꿨어요") }) : null;
+    return h("div", { class: "kb" + (b.draft ? " is-draft" : "") },
+      h("div", { class: "kb-h" }, h("b", {}, opts.label || b.title || KIND_L[b.kind]), h("span", { class: "tag" }, LANG_L[b.lang] || "국문"),
+        b.draft ? h("span", { class: "tag draft" }, "초안 · 작가님 확인") : b.source === "original" ? h("span", { class: "tag" }, "원본") : null,
         f ? h("span", { class: "fit " + (f.ok ? "ok" : "over") }, f.ok ? limitL(limit) + " 맞음" : (limit.min ? limit.n.toLocaleString() + limit.unit + "보다 짧음" : limit.n.toLocaleString() + limit.unit + " 초과") + " (" + f.n.toLocaleString() + ")") : null),
       h("p", { class: "kb-t" }, String(b.text).slice(0, 140) + (String(b.text).length > 140 ? "…" : "")),
-      h("div", { class: "kb-a" }, h("span", { class: "small muted" }, countLabel(b.text)), h("span", {}, B("복사", { size: "sm", icon: "file", onclick: () => copyText(b.text, b.title || KIND_L[b.kind]) }), canWrite ? B("고치기", { size: "sm", kind: "ghost", icon: "edit", onclick: () => openForm("kit", b) }) : null)));
+      b.note && !opts.noNote ? h("p", { class: "kb-n small muted" }, b.note) : null,
+      h("div", { class: "kb-a" }, h("span", { class: "small muted" }, countLabel(b.text)), h("span", {}, ok, B("복사", { size: "sm", icon: "file", onclick: () => copyText(b.text, b.title || KIND_L[b.kind]) }), canWrite ? B("고치기", { size: "sm", kind: "ghost", icon: "edit", onclick: () => openForm("kit", b) }) : null)));
+  }
+  // 작품별 설명 (작품 설명 원본을 작품 하나당 국문·영문으로 묶음)
+  function kitWorks() {
+    const m = new Map();
+    for (const b of (kit || []).filter((x) => x.kind === "work" && x.workNo)) { if (!m.has(b.workNo)) m.set(b.workNo, { no: b.workNo, work: b.work, en: b.workEn, year: b.year, size: b.size, ko: null, enB: null }); const g = m.get(b.workNo); if ((b.lang || "ko") === "en") g.enB = b; else g.ko = b; }
+    return [...m.values()].sort((a, b) => a.no - b.no);
+  }
+  const workLabel = (g) => g.work + " (" + [g.year, g.size].filter(Boolean).join(", ") + ")";
+  const kitWorkPick = {};
+  function workPicker(c, nd) {
+    const ws = kitWorks();
+    if (!ws.length) return null;
+    const cur = ws.find((g) => g.no === kitWorkPick[c._id]) || null;
+    const sel = h("select", { "aria-label": "어느 작품 설명", onchange: (e) => { kitWorkPick[c._id] = Number(e.target.value) || null; if (sheet && sheet.kind === "detail") renderDetail(false); else renderAll(); } }, h("option", { value: "" }, "작품을 고르면 그 작품 설명이 나와요 (" + ws.length + "점)"), ws.map((g) => h("option", { value: g.no, selected: cur && cur.no === g.no }, g.no + ". " + workLabel(g))));
+    const pair = cur ? [nd.lang === "en" ? cur.enB : cur.ko, nd.lang === "en" ? cur.ko : cur.enB].filter(Boolean) : [];
+    return h("div", { class: "wpick" }, sel, pair.map((b, i) => i === 0 ? kitBlockLine(b, nd.limit, { noNote: true }) : h("details", { class: "kb-more" }, h("summary", {}, (LANG_L[b.lang] || "국문") + "도 보기"), kitBlockLine(b, nd.limit, { noNote: true }))));
   }
   // 공모 상세 › 지원 준비 › 지원서 키트
   function applyKit(c) {
@@ -2435,8 +2462,9 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
         const fs = (fileDocs || []).filter((f) => !f.callId && f.kind === fk);
         body = fs.length ? h("div", { class: "flist" }, fs.slice(0, 4).map((f) => fileRow(f, { kindEdit: false }))) : h("p", { class: "small muted" }, "자료 › 지원자료 › 지원 파일에 ‘" + KIND_L[fk] + "’ 파일이 없어요.", " ", h("button", { class: "linkish small", type: "button", onclick: () => { closeSheet(); go("materials"); } }, "올리러 가기"));
       } else {
-        const { block, others } = bestBlock(nd.kind, nd.lang, nd.limit);
-        body = block ? [kitBlockLine(block, nd.limit), others.length ? h("details", { class: "kb-more" }, h("summary", {}, "다른 버전 " + others.length + "개"), others.map((b) => kitBlockLine(b, nd.limit))) : null]
+        const { block, others } = nd.kind === "work" ? bestBlock("work-free", nd.lang, nd.limit) : bestBlock(nd.kind, nd.lang, nd.limit);
+        const wp = nd.kind === "work" ? workPicker(c, nd) : null;
+        body = wp && !block ? wp : block ? [kitBlockLine(block, nd.limit), others.length ? h("details", { class: "kb-more" }, h("summary", {}, "다른 버전 " + others.length + "개"), others.map((b) => kitBlockLine(b, nd.limit))) : null]
           : h("p", { class: "small muted" }, LANG_L[nd.lang] + " ‘" + KIND_L[nd.kind === "cv" ? "cvtext" : nd.kind] + "’ 문구가 아직 없어요. ", canWrite ? h("button", { class: "linkish small", type: "button", onclick: () => openForm("kit", null, { kind: nd.kind === "cv" ? "cvtext" : nd.kind, lang: nd.lang }) }, "지금 추가하기") : null);
       }
       rows.push(h("div", { class: "need" }, head, body));
@@ -2452,7 +2480,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   }
   // 자료 › 지원자료 위쪽: 지원 문구 · 지원 파일
   function kitPanels() {
-    const blocks = (kit || []).slice().sort((a, b) => KIT_KINDS.findIndex((k) => k[0] === a.kind) - KIT_KINDS.findIndex((k) => k[0] === b.kind) || String(a.lang || "ko").localeCompare(String(b.lang || "ko")) || textCount(a.text).all - textCount(b.text).all);
+    const blocks = (kit || []).filter((b) => !(b.kind === "work" && b.workNo)).sort((a, b) => KIT_KINDS.findIndex((k) => k[0] === a.kind) - KIT_KINDS.findIndex((k) => k[0] === b.kind) || String(a.lang || "ko").localeCompare(String(b.lang || "ko")) || textCount(a.text).all - textCount(b.text).all);
     const groups = KIT_KINDS.map(([k, l]) => [k, l, blocks.filter((b) => b.kind === k)]).filter((g) => g[2].length);
     const textPanel = card({ title: "지원 문구", count: blocks.length || null, sub: "작가 소개·작가노트·작품 설명을 국문·영문, 길이별로 저장해 두면 공모 상세에서 분량에 맞는 것을 골라 바로 복사할 수 있어요.",
       right: canWrite ? B("문구 추가", { size: "sm", icon: "plus", onclick: () => openForm("kit", null) }) : null },
@@ -2467,7 +2495,24 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
         : fGroups.length ? h("div", { class: "kgroups" }, fGroups.map(([k, l, fs]) => h("div", { class: "kg" }, h("h3", {}, l, h("span", { class: "small muted" }, " " + fs.length)), h("div", { class: "flist" }, fs.map((f) => fileRow(f))))))
         : est("folder", "올린 파일이 없어요", "올린 뒤 종류(포트폴리오·CV·작품 이미지)를 골라 두면 공모마다 맞는 파일을 찾아 줘요."));
     if (fUp && filesApi) { dropTarget(filePanel, (fl) => fUp._upload(fl)); filePanel.classList.add("dropzone"); filePanel.setAttribute("data-drop", "여기에 놓으면 올라가요"); }
-    return [textPanel, filePanel];
+    return [textPanel, worksKitPanel(), filePanel].filter(Boolean);
+  }
+  let kitWorkQ = "";
+  function worksKitPanel() {
+    const ws = kitWorks();
+    if (!ws.length) return null;
+    const list = h("div", { class: "kw-list" });
+    const paint = () => {
+      const q = kitWorkQ.trim().toLowerCase();
+      const shown = ws.filter((g) => !q || (g.no + " " + g.work + " " + (g.en || "") + " " + (g.year || "")).toLowerCase().includes(q));
+      list.replaceChildren(...(shown.length ? shown.map((g) => h("details", { class: "kw" },
+        h("summary", {}, h("span", { class: "kw-no" }, g.no), h("span", { class: "kw-t" }, h("b", {}, g.work), h("small", {}, [g.en, g.year, g.size].filter(Boolean).join(" · "))),
+          h("span", { class: "kw-c" }, g.ko ? h("button", { type: "button", class: "linkish small", onclick: (e) => { e.preventDefault(); copyText(g.ko.text, g.work + " 국문"); } }, "국문 복사") : null, g.enB ? h("button", { type: "button", class: "linkish small", onclick: (e) => { e.preventDefault(); copyText(g.enB.text, g.work + " 영문"); } }, "영문 복사") : null)),
+        [g.ko, g.enB].filter(Boolean).map((b) => kitBlockLine(b, null, { label: b.lang === "en" ? (g.en || "English") : "국문", noNote: true })))) : [h("p", { class: "small muted" }, "‘" + kitWorkQ + "’에 맞는 작품이 없어요.")]));
+    };
+    paint();
+    const q = h("input", { type: "search", class: "kw-q", value: kitWorkQ, placeholder: "작품 이름·연도로 찾기", "aria-label": "작품 설명 찾기", oninput: (e) => { kitWorkQ = e.target.value; paint(); } });
+    return card({ title: "작품별 설명", count: ws.length, cls: "kw-box", sub: "‘그림소개와 설명’ 원본을 작품마다 국문·영문으로 나눠 두었어요. 공모 상세의 지원서 키트에서 작품을 고르면 그 설명이 바로 나와요." }, [q, list]);
   }
   function inboxPanel(inb) {
     return h("section", { class: "panel", style: "margin-top:6px" },
@@ -2743,13 +2788,13 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     "협업·프로젝트": { ms: ["제안·협의", "조건 확정", "작업", "전달", "공개"], prep: [["연락", "담당자와 일정 맞추기"], ["자료", "제안서 준비"]], budget: [["제작비", "지출"], ["작업비", "수입"]] },
     "기타": { ms: ["시작", "중간 점검", "마무리"], prep: [], budget: [] }
   };
-  const WORK_SUBS = ["ideas", "plans", "making", "prep"];
+  const WORK_SUBS = ["workhome", "ideas", "plans", "making", "prep"];
   const PLAN_LIVE = ["구상", "준비", "진행"];
   let ideas = null, plans = null, wip = null;
   let workOpen = null;            // { sub, id } — 열려 있는 작업창
   let edPending = {};             // 아직 저장 안 된 칸
   let edTimer = null, edState = "idle", edSavedAt = null, deferRender = false;
-  let workFilter = { ideas: "진행", ideaKind: "", plans: "진행", planView: "card", making: "진행", prep: "date" };
+  let workFilter = { ideas: "진행", ideaKind: "", plans: "진행", planView: "card", making: "진행", mview: "journal", prep: "date" };
   let pbTab = "overview";
   const thumbCache = new Map();
   const rid8 = () => Math.random().toString(36).slice(2, 10);
@@ -2759,7 +2804,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   const planTasks = (pid) => (tasks || []).filter((t) => !t.cancelled && t.planId === pid);
   const wipTasks = (wid) => (tasks || []).filter((t) => !t.cancelled && t.wipId === wid);
   const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
-  const isEditing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest(".wed") && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && !["checkbox", "file", "button"].includes(a.type)))); };
+  const isEditing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest(".wed, .qs, .qi, .pt-add, .jlist") && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && !["checkbox", "file", "button"].includes(a.type)))); };
   const worksOf = (p) => (p.works || []).map((w) => typeof w === "string" ? { id: rid8(), title: w } : w);
   const msOf = (p) => (p.milestones || []).slice().sort((a, b) => String(a.date || "9").localeCompare(String(b.date || "9")));
   const nextMs = (p) => msOf(p).find((m) => !m.done);
@@ -2935,6 +2980,8 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
 
   // ---- 작품 제작: 단계판 ----
   function makingList() {
+    const tog = segF("mview", [["journal", "날짜별 일지"], ["works", "작품별"]]);
+    if ((workFilter.mview || "journal") === "journal" && !workOpen) return h("div", { class: "wlist" }, h("div", { class: "wtool" }, tog, h("span", { class: "small muted" }, "사진 " + (journal || []).reduce((n, e) => n + (e.photos || []).length, 0) + "장")), canWrite ? quickShot() : null, journalList(60));
     const ST = WORK.making.states;
     const all = (wip || []).slice().sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
     const act = all.filter((w) => w.status !== "홈페이지 등록");
@@ -2949,7 +2996,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     const cols = ST.filter((s) => shown.some((w) => stOf(w) === s));
     const board = h("div", { class: "mboard" + (workOpen ? " narrow" : "") }, cols.map((s) => { const ws = shown.filter((w) => stOf(w) === s); return h("div", { class: "mcol" }, h("div", { class: "mcol-h" }, s, h("small", {}, ws.length)), ws.map(card)); }));
     return h("div", { class: "wlist" },
-      h("div", { class: "wtool" }, segF("making", [["진행", "만드는 중", act.length], ["전체", "전체", all.length]]), canWrite && !workOpen ? B("작품 추가", { size: "sm", kind: "primary", icon: "plus", onclick: () => newWork("making") }) : null),
+      h("div", { class: "wtool" }, workOpen ? null : tog, segF("making", [["진행", "만드는 중", act.length], ["전체", "전체", all.length]]), canWrite && !workOpen ? B("작품 추가", { size: "sm", kind: "primary", icon: "plus", onclick: () => newWork("making") }) : null),
       workOpen ? null : h("p", { class: "small muted wnote" }, "과정을 남기고 싶은 작품만 추가하세요. 단계마다 사진을 올리면 제작 과정 기록이 되고, 홈페이지에 등록하면 기록 › 작품에 나타나요."),
       all.length ? [workOpen ? null : strip, board] : est("image", "만드는 중인 작품이 없어요", "가제와 크기만 적고, 단계가 바뀔 때마다 사진을 남겨 두세요.", canWrite ? B("작품 추가", { size: "sm", icon: "plus", onclick: () => newWork("making") }) : null));
   }
@@ -3194,7 +3241,8 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     return edWrap("making:" + d._id, [edTop("making", d), edTitle("making", v),
       stepper(ST, cur),
       h("div", { class: "wprops row" }, edProp("크기", edField(v, "size", { ph: "예: 60×90cm" })), edProp("재료", edField(v, "medium", { ph: "예: 한지에 먹, 채색, 배접" })), edProp("시작한 날", edField(v, "startedAt", { t: "date" })), edProp("완성 목표", edField(v, "dueAt", { t: "date" })), edProp("기획", edField(v, "planId", { t: "select", opts: planOpts, none: "연결 안 함" })), edProp("종류", edField(v, "kind", { t: "select", opts: WORK.making.kinds }))),
-      edSec("단계별 과정", h("div", { class: "pstages" }, ST.slice(0, Math.max(ci + 2, 2)).map(stageBlock)), "사진을 그 단계 칸에 끌어다 놓으면 단계가 함께 기록돼요"),
+      (journal || []).some((e) => e.wipId === d._id) ? edSec("작업 일지에서", h("div", { class: "wfiles" }, (journal || []).filter((e) => e.wipId === d._id).sort((a, b) => String(b.date).localeCompare(String(a.date))).flatMap((e) => (e.photos || []).map((r) => h("button", { type: "button", class: "wf-img", onclick: () => openFile(r), title: fmt(e.date) + (e.note ? " · " + e.note : "") }, thumbImg(r))))), "이 작품으로 연결해 남긴 작업 사진") : null,
+      edSec("단계별 과정 (선택)", h("div", { class: "pstages" }, ST.slice(0, Math.max(ci + 2, 2)).map(stageBlock)), "단계를 기록하고 싶을 때만 · 사진을 그 단계 칸에 끌어다 놓으면 단계가 함께 남아요"),
       edSec("준비할 것", prepList(wipTasks(d._id), { wipId: d._id }, [["재료", "한지·안료 확인"], ["작품", "배접 맡기기"], ["작품", "촬영 일정 잡기"]])),
       edMeta(d)]);
   }
@@ -3210,6 +3258,85 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       ap.map((p) => { const nx = nextMs(p) || null; const nt = planTasks(p._id).filter((t) => !t.done).sort((a, b) => String(a.due || "9").localeCompare(String(b.due || "9")))[0];
         return h("div", { class: "row" }, h("div", { class: "row-main" }, h("button", { class: "linkish", type: "button", onclick: () => openWork("plans", p._id) }, p.title || "제목 없는 기획"), h("div", { class: "row-meta" }, h("span", {}, p.status), p.kind ? h("span", {}, p.kind) : null, nx ? h("span", {}, "다음 단계 · " + nx.label + (nx.date ? " (" + fmt(nx.date) + ")" : "")) : null, nt ? h("span", {}, "준비 · " + nt.title) : null))); }),
       h("div", { class: "row" }, h("div", { class: "row-main" }, h("div", { class: "row-meta" }, h("button", { class: "linkish small", type: "button", onclick: () => go("making") }, "만드는 중인 작품 " + mk.length), h("button", { class: "linkish small", type: "button", onclick: () => go("ideas") }, "키우는 아이디어 " + seeds.length))))));
+  }
+
+  // ================= 작업 개요 · 작업 일지 =================
+  // 작업 일지: 사진을 올리면 오늘 날짜로 남는다. 한 줄 메모·작품 연결은 원할 때만.
+  let journal = null;
+  async function saveShots(list, note, wipId) {
+    const pics = list.filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name));
+    if (!pics.length) { toast("사진 파일을 골라 주세요"); return false; }
+    if (!filesApi) { toast("작업 사진은 웹앱에서 올릴 수 있어요"); return false; }
+    toast("올리는 중… (" + pics.length + "장)");
+    try {
+      const refs = await uploadMany(pics, "work/journal");
+      return await write("journal:new", () => db.collection("journal").add({ date: TODAY, photos: refs, note: (note || "").trim() || null, wipId: wipId || null, createdAt: stamp(), updatedAt: stamp(), by: meEmail() }), "작업 사진 " + refs.length + "장을 남겼어요");
+    } catch (e) { toast("사진을 올리지 못했어요. 50MB 이하 이미지인지 확인해 주세요."); return false; }
+  }
+  // 버튼 하나로: 사진 고르기(휴대폰은 카메라) → 바로 저장
+  function shotNow() {
+    const inp = h("input", { type: "file", accept: "image/*", multiple: true, style: "position:fixed;left:-9999px", onchange: async (e) => { const l = Array.from(e.target.files || []); inp.remove(); if (l.length) await saveShots(l, "", null); } });
+    document.body.appendChild(inp); inp.click();
+  }
+  // 일지 입력: 사진(끌어다 놓기·고르기) + 한 줄 + 작품(선택)
+  function quickShot() {
+    const pics = []; const prev = h("div", { class: "shots" });
+    const note = h("input", { type: "text", placeholder: "한 줄 메모 (선택) — 예: 배접 전 마지막 채색", "aria-label": "메모" });
+    const ws = h("select", { "aria-label": "어느 작품" }, h("option", { value: "" }, "작품 연결 안 함"), (wip || []).filter((w) => w.status !== "홈페이지 등록").map((w) => h("option", { value: w._id }, w.title || "가제 없음")));
+    const addPics = (fl) => { for (const f of fl) pics.push(f); prev.replaceChildren(...pics.map((f) => h("img", { src: URL.createObjectURL(f), alt: f.name }))); save.disabled = !pics.length; };
+    const save = B("남기기", { kind: "primary", size: "sm", icon: "check", disabled: true, onclick: async () => { save.disabled = true; const ok = await saveShots(pics, note.value, ws.value); if (ok) { pics.length = 0; prev.replaceChildren(); note.value = ""; } save.disabled = !pics.length; } });
+    const pick = h("label", { class: "qs-drop" }, ic("image"), h("b", {}, "작업 사진 올리기"), h("span", { class: "small muted" }, "찍거나 골라서 · 여기에 끌어다 놓아도 돼요 · 날짜는 오늘로 남아요"), h("input", { type: "file", accept: "image/*", multiple: true, class: "vh", onchange: (e) => { addPics(Array.from(e.target.files || [])); e.target.value = ""; } }));
+    const box = h("div", { class: "qs" }, pick, prev, h("div", { class: "qs-a" }, note, ws, save));
+    if (filesApi && canWrite) dropTarget(box, addPics);
+    return box;
+  }
+  function journalList(limit) {
+    const rows = (journal || []).slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+    const shown = rows.slice(0, limit || 40);
+    if (!shown.length) return est("image", "아직 남긴 작업 사진이 없어요", "그리는 중에 사진 한 장씩만 올려 두면 날짜별 작업 기록이 돼요. 메모는 안 써도 괜찮아요.");
+    const byDate = new Map(); for (const e of shown) { const k = e.date || String(e.createdAt || "").slice(0, 10); if (!byDate.has(k)) byDate.set(k, []); byDate.get(k).push(e); }
+    return h("div", { class: "jlist" }, [...byDate.entries()].map(([d, es]) => h("section", { class: "jday" },
+      h("div", { class: "jday-h" }, h("b", {}, fmt(d)), h("span", { class: "small muted" }, d === TODAY ? "오늘" : ddTxt(d).replace("D+", "") + "일 전"), h("small", { class: "muted" }, es.reduce((n, e) => n + (e.photos || []).length, 0) + "장")),
+      es.map((e) => {
+        const w = e.wipId ? (wip || []).find((x) => x._id === e.wipId) : null;
+        const ni = canWrite ? h("input", { type: "text", class: "j-note", value: e.note || "", placeholder: "메모 (선택)", "aria-label": "메모", onchange: (ev) => write("journal:" + e._id, () => db.collection("journal").doc(e._id).update({ note: ev.target.value.trim() || null, updatedAt: stamp() }), null) }) : (e.note ? h("p", { class: "j-note" }, e.note) : null);
+        let arm = false;
+        return h("div", { class: "jentry" },
+          h("div", { class: "wfiles" }, (e.photos || []).map((r) => h("button", { type: "button", class: "wf-img", onclick: () => openFile(r), title: r.name }, thumbImg(r)))),
+          h("div", { class: "j-meta" }, ni, w ? h("button", { class: "pt-plan", type: "button", onclick: () => openWork("making", w._id) }, w.title || "가제 없음") : null,
+            canWrite ? h("button", { class: "linkish small", type: "button", onclick: async (ev) => { const b = ev.currentTarget; if (!arm) { arm = true; b.textContent = "한 번 더"; setTimeout(() => { arm = false; b.textContent = "지우기"; }, 3000); return; }
+              for (const r of e.photos || []) { try { if (filesApi) await filesApi.remove(r.path); } catch (x) {} }
+              write("journal:" + e._id, () => db.collection("journal").doc(e._id).delete(), "지웠어요"); } }, "지우기") : null));
+      }))),
+      rows.length > shown.length ? h("p", { class: "small muted" }, "그 전 기록 " + (rows.length - shown.length) + "개는 작업 일지에서 더 볼 수 있어요") : null);
+  }
+
+  // 작업 개요 (작업 메뉴 첫 화면)
+  function workHome() {
+    if (ideas === null || plans === null || wip === null || journal === null) return [empty("불러오는 중입니다.")];
+    const wk = addDays(7);
+    const prep = (tasks || []).filter((t) => !t.cancelled && !t.done && (t.planId || t.wipId) && t.due && t.due <= wk).sort((a, b) => String(a.due).localeCompare(String(b.due)));
+    const ms = [];
+    for (const p of (plans || []).filter((x) => PLAN_LIVE.includes(x.status || "구상"))) for (const m of p.milestones || []) if (!m.done && m.date && m.date >= addDays(-7) && m.date <= addDays(60)) ms.push({ m, p });
+    ms.sort((a, b) => a.m.date.localeCompare(b.m.date));
+    const photos = (journal || []).slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).flatMap((e) => (e.photos || []).map((r) => ({ r, d: e.date }))).slice(0, 10);
+    const seeds = (ideas || []).filter((x) => ["씨앗", "키우는 중"].includes(x.status || "씨앗")).sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""))).slice(0, 4);
+    const live = (plans || []).filter((p) => PLAN_LIVE.includes(p.status || "구상")).slice(0, 3);
+    const yr = Number(TODAY.slice(0, 4));
+    const usage = usageByTitle();
+    const fresh = catWorks().filter((w) => Number(w.year) >= yr - 1 && !usage.get(String(w.title).trim()));
+    const out = [];
+    out.push(h("div", { class: "grid2 wh-cap" }, canWrite ? h("section", { class: "panel" }, h("div", { class: "p-head" }, h("h2", {}, "작업 사진")), quickShot()) : null, canWrite ? h("section", { class: "panel" }, h("div", { class: "p-head" }, h("h2", {}, "아이디어 메모")), quickIdea()) : null));
+    out.push(h("div", { class: "grid2" },
+      card({ title: "이번 주 준비할 것", count: prep.length || null, hot: prep.some((t) => t.due < TODAY), right: moreBtn("준비", () => go("prep")) }, prep.length ? h("div", { class: "ptl" }, prep.slice(0, 7).map((t) => prepRow(t, true))) : est("check", "이번 주에 날짜가 잡힌 준비가 없어요", "기획 안에서 준비할 것에 날짜를 넣으면 여기에 모여요.")),
+      card({ title: "다가오는 기획 일정", count: ms.length || null, right: moreBtn("기획", () => go("plans")) }, ms.length ? h("div", { class: "wh-ms" }, ms.slice(0, 7).map(({ m, p }) => h("button", { type: "button", class: "wh-msi", onclick: () => { pbTab = "schedule"; openWork("plans", p._id); } }, h("b", {}, fmt(m.date).slice(5)), h("span", {}, m.label || "—", h("small", {}, p.title || "제목 없는 기획")), h("em", { class: m.date < TODAY ? "late" : "" }, ddTxt(m.date))))) : est("cal", "60일 안에 잡힌 기획 일정이 없어요", "기획 › 일정에 날짜를 넣으면 여기에 보여요."))));
+    out.push(card({ title: "최근 작업", count: (journal || []).length || null, right: moreBtn("작업 일지", () => go("making")) }, photos.length ? h("div", { class: "wh-strip" }, photos.map(({ r, d }) => h("button", { type: "button", class: "wh-ph", onclick: () => openFile(r), title: fmt(d) }, thumbImg(r), h("small", {}, fmt(d).slice(5))))) : est("image", "작업 사진이 아직 없어요", "그리는 중에 위 ‘작업 사진’에 한 장씩 올려 두세요.")));
+    out.push(h("div", { class: "grid2" },
+      card({ title: "진행 중인 기획", count: live.length || null, right: moreBtn("기획", () => go("plans")) }, live.length ? h("div", { class: "pcards narrow" }, live.map(planCard)) : est("folder", "진행 중인 기획이 없어요", "전시·시리즈처럼 날짜가 잡힌 큰 일이 생기면 기획으로 만들어요.", canWrite ? B("새 기획", { size: "sm", icon: "plus", onclick: () => newWork("plans") }) : null)),
+      h("div", { class: "wh-col" },
+        card({ title: "키우는 아이디어", count: (ideas || []).filter((x) => ["씨앗", "키우는 중"].includes(x.status || "씨앗")).length || null, right: moreBtn("아이디어", () => go("ideas")) }, seeds.length ? h("div", { class: "rows" }, seeds.map((x) => h("div", { class: "row" }, h("div", { class: "row-main" }, h("button", { class: "linkish", type: "button", onclick: () => openWork("ideas", x._id) }, x.title || "제목 없음"), h("div", { class: "row-meta" }, h("span", {}, x.kind || "기타"), h("span", {}, x.status || "씨앗")))))) : est("sparkle", "아이디어가 없어요", null)),
+        card({ title: "공모에 아직 안 낸 최근작", count: fresh.length || null, right: moreBtn("작품", () => go("works")) }, fresh.length ? h("p", { class: "small" }, fresh.slice(0, 8).map((w) => w.title).join(" · ") + (fresh.length > 8 ? " 외 " + (fresh.length - 8) + "점" : ""), h("br"), h("span", { class: "muted" }, yr - 1 + "~" + yr + "년 홈페이지 작품 중 공모 기록에 없는 것")) : est("check", "최근작은 모두 공모에 낸 적이 있어요", null)))));
+    return out;
   }
 
   function renderArtist() {
@@ -3231,6 +3358,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       case "history": body = [renderHistory()]; break;
       case "sales": { const r = renderRecord(); body = Array.isArray(r) ? r : [r.sales]; break; }
       case "projects": { const r = renderRecord(); body = Array.isArray(r) ? r : [r.props || est("file", "아직 프로젝트·기획안이 없어요", "개인전 기획안이나 공모에 다시 쓸 작품 묶음을 여기에 모아요.")]; break; }
+      case "workhome": body = workHome(); break;
       case "ideas": case "plans": case "making": case "prep": body = renderWork(artistSub); break;
       case "materials": body = renderMaterialsPage(); break;
       case "files": body = [renderDrive()]; break;
@@ -3903,7 +4031,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     let filename, data;
     if (kind === "json") {
       filename = "이현정_전시기록부_백업_" + day + ".json";
-      data = JSON.stringify({ exportedAt: stamp(), calls, tasks, events, exhibitions, requests, inbox, ideas, plans, wip, kit, files: fileDocs, settings: { strategy, situation, catalog, sources, drive } }, null, 1);
+      data = JSON.stringify({ exportedAt: stamp(), calls, tasks, events, exhibitions, requests, inbox, ideas, plans, wip, journal, kit, files: fileDocs, settings: { strategy, situation, catalog, sources, drive } }, null, 1);
     } else {
       const cols = [["name", "공모"], ["status", "단계"], ["deadline", "마감"], ["format", "형식"], ["hostType", "주관"], ["region", "지역"], ["organizer", "주최"], ["submittedAt", "제출일"], ["resultDate", "결과 예정"], ["works", "출품작"], ["feeAmount", "응모비"], ["feeCur", "통화"], ["cost", "예상 비용(만원)"], ["url", "링크"]];
       const esc = (v) => { const s = Array.isArray(v) ? v.join(" / ") : v == null ? "" : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
@@ -4344,7 +4472,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
       else if (view === "calls") { label = "+ 공모 제보"; fn = () => openForm("inbox", null); }
       else if (view === "artist" && !workOpen && artistSub === "ideas") { label = "+ 아이디어"; fn = () => newWork("ideas"); }
       else if (view === "artist" && !workOpen && artistSub === "plans") { label = "+ 새 기획"; fn = () => newWork("plans"); }
-      else if (view === "artist" && !workOpen && artistSub === "making") { label = "+ 작품 추가"; fn = () => newWork("making"); }
+      else if (view === "artist" && !workOpen && (artistSub === "making" || artistSub === "workhome")) { label = "+ 작업 사진"; fn = shotNow; }
       else if (view === "home" && !isAdmin()) { label = "+ 공모 제보"; fn = () => openForm("inbox", null); }
       else if (view === "home") { label = "+ 일정·할 일"; fn = () => openForm("tasks", null, { due: TODAY }); }
     }
@@ -4392,7 +4520,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     renderFab();
   }
   function renderAll() {
-    if (view === "artist" && workOpen && isEditing()) { deferRender = true; return; }
+    if (view === "artist" && WORK_SUBS.includes(artistSub) && isEditing()) { deferRender = true; return; }
     renderChrome();
     if (view === "home") renderHome(); else if (view === "plan") renderPlan(); else if (view === "calls") renderCalls(); else renderArtist();
     if (sheet && sheet.kind === "detail") renderDetail(false);
@@ -4401,9 +4529,13 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
   function route(r) {
     const [r0, wid] = String(r || "").split("~");
     if (workOpen && !(wid && workOpen.id === wid)) edFlush();
+    // 화면을 옮길 때는 입력 중이던 칸에서 빠져나와 새 화면을 바로 그린다
+    if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) document.activeElement.blur();
+    deferRender = false;
     workOpen = wid && WORK[r0] ? { sub: r0, id: wid } : null; r = r0;
     if (r === "todo") planTab = "todo"; const m = ROUTES[r] || ROUTES.home; view = m[0]; if (m[1]) artistSub = m[1]; if (view === "artist" && SUB_AREA[artistSub] === "docs") startDrive(); renderAll(); window.scrollTo(0, 0); }
   window.addEventListener("hashchange", () => route(location.hash.slice(1)));
+  document.addEventListener("focusout", () => setTimeout(() => { if (deferRender && !isEditing()) { deferRender = false; renderAll(); } }, 80));
   $("help").addEventListener("click", () => openHelp());
   $("gear").addEventListener("click", () => go("profile"));
   $("ws").addEventListener("click", () => go("profile"));
@@ -4435,6 +4567,7 @@ button.sc { cursor: pointer; } button.sc:hover { border-color: var(--ink-3); }
     db.collection("ideas").onSnapshot((s) => { ideas = rows(s); renderAll(); }, () => {});
     db.collection("plans").onSnapshot((s) => { plans = rows(s); renderAll(); }, () => {});
     db.collection("wip").onSnapshot((s) => { wip = rows(s); renderAll(); }, () => {});
+    db.collection("journal").onSnapshot((s) => { journal = rows(s); renderAll(); }, () => {});
     db.collection("files").onSnapshot((s) => { fileDocs = rows(s); renderAll(); }, () => {});
     db.doc("settings/strategy").onSnapshot((s) => { strategy = s.exists ? s.data() : false; renderAll(); }, () => {});
     db.doc("settings/situation").onSnapshot((s) => { situation = s.exists ? s.data() : false; renderAll(); }, () => {});
